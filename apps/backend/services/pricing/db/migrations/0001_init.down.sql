@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS outbox;
+DROP TABLE IF EXISTS promotions;
+DROP TABLE IF EXISTS prices;
+DROP FUNCTION IF EXISTS set_updated_at();

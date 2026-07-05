@@ -1,0 +1,178 @@
+name: CI/CD Pipeline for Microservices
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'app/**'
+      - '.github/workflows/ci-build.yaml'
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: 'read'  # Allow read access to the repository (for ID token)
+      id-token: 'write' # Allow get and send ID tokens for authentication with GCP
+    
+    strategy:
+      matrix:
+        service: [analytics, api-gateway, auth, cart, catalog, inventory, notification, order, payment, pricing, recommendation, review, search, shipping, user, wishlist]
+        include:
+          - service: analytics 
+            directory: apps/backend/services/analytics
+            image_name: analytics-service
+          - service: api-gateway
+            directory: apps/backend/services/api-gateway
+            image_name: api-gateway-service
+          - service: auth
+            directory: apps/backend/services/auth
+            image_name: auth-service
+          - service: cart
+            directory: apps/backend/services/cart
+            image_name: cart-service
+          - service: catalog
+            directory: apps/backend/services/catalog
+            image_name: catalog-service
+          - service: inventory
+            directory: apps/backend/services/inventory
+            image_name: inventory-service
+          - service: notification
+            directory: apps/backend/services/notification
+            image_name: notification-service
+          - service: order
+            directory: apps/backend/services/order
+            image_name: order-service
+          - service: payment
+            directory: apps/backend/services/payment
+            image_name: payment-service
+          - service: pricing
+            directory: apps/backend/services/pricing
+            image_name: pricing-service
+          - service: recommendation
+            directory: apps/backend/services/recommendation
+            image_name: recommendation-service
+          - service: review
+            directory: apps/backend/services/review
+            image_name: review-service
+          - service: search
+            directory: apps/backend/services/search
+            image_name: search-service
+          - service: shipping
+            directory: apps/backend/services/shipping
+            image_name: shipping-service
+          - service: user
+            directory: apps/backend/services/user
+            image_name: user-service
+          - service: wishlist
+            directory: apps/backend/services/wishlist
+            image_name: wishlist-service
+
+    # git clone, fetch
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    # git diff
+    - name: Check for changes in service directory
+      id: filter    # (steps.filter.outputs.changed)
+      uses: dorny/paths-filter@v3  
+      with:
+        base: 'main'
+        filters: |
+          changed:
+            - '${{ matrix.directory }}/**'
+
+    - name: Set up Docker Buildx
+      if: steps.filter.outputs.changed == 'true'
+      uses: docker/setup-buildx-action@v3
+
+
+    - name: Build Image
+      if: steps.filter.outputs.changed == 'true'
+      uses: docker/build-push-action@v6
+      with:
+        context: ${{ matrix.directory }}
+        file: ${{ matrix.directory }}/Dockerfile
+        load: true
+        tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image_name }}:${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+      #Security scanning with Trivy (Optional/Placeholder)
+    - name: Run Trivy scanner
+      if: steps.filter.outputs.changed == 'true'
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image_name }}:${{ github.sha }}
+        format: 'table'
+        exit-code: '1'
+        ignore-unfixed: true
+        severity: 'CRITICAL,HIGH'
+
+
+    - name: Login to Docker Hub
+      if: steps.filter.outputs.changed == 'true'
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Log in to GCP for get access token to authenticate with GAR and push Docker images in
+    - name: Log in to GCP
+      id: auth
+      if: steps.filter.outputs.changed == 'true'
+      uses: google-github-actions/auth@v2 
+      with:
+        workload_identity_provider: ${{ secrets.WI_PROVIDER }}  # Address of the Workload Identity Provider. Go with token from GitHub Api.
+        service_account: ${{ secrets.SERVICE_ACCOUNT }}
+        token_format: 'access_token'  # Here in this variable we will get the access token to authenticate with GAR
+
+
+      # Write the access token to a config for docker client to authenticate with GAR
+    - name: Login to GAR
+      if: steps.filter.outputs.changed == 'true'
+      uses: docker/login-action@v3
+      with:
+        registry: europe-central2-docker.pkg.dev
+        username: oauth2accesstoken
+        password: ${{ steps.auth.outputs.access_token }}
+
+
+    - name: Push to Registry
+      if: steps.filter.outputs.changed == 'true'
+      uses: docker/build-push-action@v6
+      with:
+        context: ${{ matrix.directory }}
+        file: ${{ matrix.directory }}/Dockerfile
+        push: true
+        tags: 
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image_name }}:${{ github.sha }}
+            europe-central2-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_REPOSITORY }}/${{ matrix.image_name }}:${{ github.sha }}
+        cache-from: type=gha
+ 
+
+
+
+    - name: GitOps Update
+      if: steps.filter.outputs.changed == 'true'
+      env: 
+        GITHUB_PAT: ${{ secrets.GITHUB_PAT }}
+      run: |
+        git config --global user.name "github-actions"
+        git config --global user.email "github-actions@github.com"
+        
+        git clone https://x-access-token:${GITHUB_PAT}@github.com/Dango-go/Infrastructure-microsoft-gitops.git
+
+        cd Infrastructure-microsoft-gitops
+        
+        sed -i "s|image: .*/${{ matrix.image_name }}:.*|image: ${{ secrets.URL_PROVIDER }}/${{ matrix.image_name }}:${{ github.sha }} |g" manifests/applications/${{ matrix.service }}/deployment.yaml
+
+        git add .
+        git commit -m 'Update image for ${{ matrix.service }} service to ${{ github.sha }}'
+
+        for i in {1..5}; do
+          git push && break || git --rebase && sleep 5
+        done

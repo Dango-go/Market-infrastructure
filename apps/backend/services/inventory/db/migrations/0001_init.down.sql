@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS outbox;
+DROP TABLE IF EXISTS reservations;
+DROP TABLE IF EXISTS stock_items;
+DROP TABLE IF EXISTS warehouses;
+DROP FUNCTION IF EXISTS set_updated_at();

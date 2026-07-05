@@ -1,0 +1,15 @@
+package searchdb
+
+import (
+    "embed"
+    "io/fs"
+)
+
+//go:embed migrations/*.sql
+var migrationsFS embed.FS
+
+func Migrations() fs.FS {
+    sub, err := fs.Sub(migrationsFS, "migrations")
+    if err != nil { panic(err) }
+    return sub
+}
