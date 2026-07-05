@@ -4,8 +4,8 @@ on:
   push:
     branches: [ "main" ]
     paths:
-      - 'app/**'
-      - '.github/workflows/ci-build.yaml'
+      - 'apps/**'
+      - '.github/workflows/application-ci.yaml'
 
 jobs:
   build-and-push:
@@ -152,27 +152,4 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image_name }}:${{ github.sha }}
             europe-central2-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_REPOSITORY }}/${{ matrix.image_name }}:${{ github.sha }}
         cache-from: type=gha
- 
 
-
-
-    - name: GitOps Update
-      if: steps.filter.outputs.changed == 'true'
-      env: 
-        GITHUB_PAT: ${{ secrets.GITHUB_PAT }}
-      run: |
-        git config --global user.name "github-actions"
-        git config --global user.email "github-actions@github.com"
-        
-        git clone https://x-access-token:${GITHUB_PAT}@github.com/Dango-go/Infrastructure-microsoft-gitops.git
-
-        cd Infrastructure-microsoft-gitops
-        
-        sed -i "s|image: .*/${{ matrix.image_name }}:.*|image: ${{ secrets.URL_PROVIDER }}/${{ matrix.image_name }}:${{ github.sha }} |g" manifests/applications/${{ matrix.service }}/deployment.yaml
-
-        git add .
-        git commit -m 'Update image for ${{ matrix.service }} service to ${{ github.sha }}'
-
-        for i in {1..5}; do
-          git push && break || git --rebase && sleep 5
-        done
