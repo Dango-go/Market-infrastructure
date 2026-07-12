@@ -80,7 +80,7 @@ jobs:
       id: filter    # (steps.filter.outputs.changed)
       uses: dorny/paths-filter@v3  
       with:
-        base: 'main'
+        base: ${{ github.event.before }}
         filters: |
           changed:
             - '${{ matrix.directory }}/**'
