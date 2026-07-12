@@ -4,7 +4,7 @@ on:
   push:
     branches: [ "main" ]
     paths:
-      - 'apps/**'
+      - 'app/**'
       - '.github/workflows/application-ci.yaml'
 
 jobs:
