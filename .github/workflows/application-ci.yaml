@@ -22,52 +22,52 @@ jobs:
         service: [analytics, api-gateway, auth, cart, catalog, inventory, notification, order, payment, pricing, recommendation, review, search, shipping, user, wishlist]
         include:
           - service: analytics 
-            directory: apps/backend/services/analytics
+            directory: app/backend/services/analytics
             image_name: analytics-service
           - service: api-gateway
-            directory: apps/backend/services/api-gateway
+            directory: app/backend/services/api-gateway
             image_name: api-gateway-service
           - service: auth
-            directory: apps/backend/services/auth
+            directory: app/backend/services/auth
             image_name: auth-service
           - service: cart
-            directory: apps/backend/services/cart
+            directory: app/backend/services/cart
             image_name: cart-service
           - service: catalog
-            directory: apps/backend/services/catalog
+            directory: app/backend/services/catalog
             image_name: catalog-service
           - service: inventory
-            directory: apps/backend/services/inventory
+            directory: app/backend/services/inventory
             image_name: inventory-service
           - service: notification
-            directory: apps/backend/services/notification
+            directory: app/backend/services/notification
             image_name: notification-service
           - service: order
-            directory: apps/backend/services/order
+            directory: app/backend/services/order
             image_name: order-service
           - service: payment
-            directory: apps/backend/services/payment
+            directory: app/backend/services/payment
             image_name: payment-service
           - service: pricing
-            directory: apps/backend/services/pricing
+            directory: app/backend/services/pricing
             image_name: pricing-service
           - service: recommendation
-            directory: apps/backend/services/recommendation
+            directory: app/backend/services/recommendation
             image_name: recommendation-service
           - service: review
-            directory: apps/backend/services/review
+            directory: app/backend/services/review
             image_name: review-service
           - service: search
-            directory: apps/backend/services/search
+            directory: app/backend/services/search
             image_name: search-service
           - service: shipping
-            directory: apps/backend/services/shipping
+            directory: app/backend/services/shipping
             image_name: shipping-service
           - service: user
-            directory: apps/backend/services/user
+            directory: app/backend/services/user
             image_name: user-service
           - service: wishlist
-            directory: apps/backend/services/wishlist
+            directory: app/backend/services/wishlist
             image_name: wishlist-service
 
     # git clone, fetch
