@@ -402,3 +402,225 @@ auth-service -> Kafka/Redpanda -> user-service -> PostgreSQL
 - є gateway і красивий storefront
 
 Для DevOps-проєкту це вже дуже сильна база, яку можна розкладати в Docker, а далі в Kubernetes.
+
+> Bohdаn4k:
+gitops-manifests/
+│
+├── 📁 bootstrap/                         # Шаблон App-of-Apps (Серце GitOps)
+│   ├── root-application.yaml             # Головний маніфест ArgoCD (керує іншими аплікаціями)
+│   ├── 01-platform-apps.yaml             # Пакети безпеки, мережі та автоскейлінгу
+│   ├── 02-datastores-apps.yaml           # Всі бази даних, черги та CDC
+│   ├── 03-observability-apps.yaml        # Весь моніторинг, логування та eBPF-трейсинг
+│   └── 04-core-services-apps.yaml        # Твої 15-17 бізнес-мікросервісів
+│
+├── 📁 01-platform/                       # Рівень 1: Мережа, Безпека та Залізо в K8s
+│   ├── 📁 cilium/
+│   │   ├── Application.yaml              # Маніфест ArgoCD для Cilium
+│   │   ├── values.yaml                   # eBPF mode (kube-proxy replacement), Hubble enabled
+│   │   └── clustermesh-policy.yaml       # Конфіг з'єднання кількох кластерів через eBPF
+│   ├── 📁 istio/  Тільки для мікросервісів
+│   │   ├── base-app.yaml                 # Istio Custom Resource Definitions (CRDs)
+│   │   ├── istiod-app.yaml               # Control Plane (Strict mTLS політики)
+│   │   └── gateway-envoy.yaml            # Ingress / API Gateway на базі Envoy (JWT validation, Rate Limiting)
+│   ├── 📁 karpenter/
+│   │   ├── Application.yaml
+│   │   ├── nodepool-dev-spot.yaml        # Правила для дешевих EC2 Spot-інстансів
+│   │   └── ec2nodeclass-bottlerocket.yaml# Специфікація під AWS Bottlerocket OS
+│   ├── 📁 cert-manager/
+│   │   ├── Application.yaml
+│   │   └── cluster-issuers.yaml          # Let's Encrypt конфігурація для автоматичних TLS-сертифікатів
+│   ├── 📁 vault-eso/
+│   │   ├── external-secrets-operator.yaml# Оператор для зв'язку з HashiCorp Vault
+│   │   └── cluster-secret-store.yaml     # Глобальний конект до Vault з використанням AWS IAM (IRSA)
+│   ├── 📁 kyverno/
+│   │   ├── Application.yaml
+│   │   └── cluster-policies.yaml         # Заборона root-контейнерів + перевірка підписів Cosign
+│   └── 📁 falco/
+│       ├── Application.yaml              # Рантайм-захист на eBPF
+│       └── falco-rules.yaml              # Справи безпеки (алерти в Slack, якщо хтось запустив bash в подій)
+│
+├── 📁 02-datastores/                     # Рівень 2: Бази даних, Черги та CDC (Stateful Layer)
+│   ├── 📁 cloudnative-pg/                # PostgreSQL Оператор
+│   │   ├── operator.yaml
+│   │   ├── cluster-postgres-ha.yaml      # 3 репліки Postgres з автоматичним бекапом на AWS S3
+│   │   └── debezium-cdc-connector.yaml   # Читання WAL-логів та стрімінг змін у Кафку
+│   ├── 📁 strimzi-kafka/                 # Kafka Оператор
+│   │   ├── operator.yaml
+│   │   ├── kafka-cluster-kraft.yaml      # Kafka кластер у режимі KRaft (без ZooKeeper)
+│   │   └── kafka-topics.yaml             # Декларативний опис топіків (orders, billing, delivery)
+│   ├── 📁 redis-operator/
+│   │   ├── operator.yaml
+│   │   └── redis-cluster-cache.yaml      # Redis Cluster для кешування сесій та товарів
+│   └── 📁 clickhouse-altinity/           # ClickHouse Оператор для аналітики
+│       ├── operator.yaml
+│       └── clickhouse-analytics-db.yaml  # Кластер для збереження гігантських аналітичних даних
+│
+
+> Bohdаn4k:
+├── 📁 03-observability/                  # Рівень 3: Моніторинг, Трейсинг та Логування
+│   ├── 📁 kube-prometheus-stack/         # Prometheus Operator + Grafana
+│   │   ├── Application.yaml
+│   │   └── values.yaml                   # Тюнінг Prometheus, додавання Thanos Sidecar
+│   ├── 📁 thanos/
+│   │   ├── compactor.yaml                # Даунсемплінг (стиснення) старих метрик в S3
+│   │   ├── store-gateway.yaml            # Доступ Grafana до історичних даних в S3
+│   │   └── querier.yaml                  # Глобальна точка збору метрик
+│   ├── 📁 loki-distributed/
+│   │   ├── Application.yaml              # Мікросервісна архітектура зберігання логів
+│   │   └── promtail-daemonset.yaml       # Агент збору логів з кожної Bottlerocket-ноди
+│   ├── 📁 opentelemetry-collector/
+│   │   ├── otel-collector-config.yaml    # Приймає трейси від додатків і шле в Tempo
+│   │   └── tempo-distributed.yaml        # Розподілений трейсинг (Tempo мікросервіси)
+│   └── 📁 defectdojo/
+│       ├── Application.yaml
+│       └── values.yaml                   # Агрегатор уразливостей (сюди стікаються звіти від Trivy/Snyk)
+│
+├── 📁 04-core-services/                  # Рівень 4: Конфігурація твоїх 15-17 мікросервісів
+│   ├── 📁 orders/
+│   │   ├── Application.yaml              # Реєстрація сервісу в ArgoCD
+│   │   ├── rollout.yaml                  # Маніфест Flagger / Argo Rollouts (Canary на базі Istio метрик)
+│   │   ├── secret-claims.yaml            # Опис секретів, які ESO має дістати з Vault
+│   │   ├── values-dev.yaml               # Налаштування для Dev (1 репліка, CPU limits менші)
+│   │   └── values-prod.yaml              # Налаштування для Prod (HPA, 5+ реплік)
+│   ├── 📁 cart/
+│   │   ├── Application.yaml
+│   │   └── ...
+│   └── 📁 gateway-bff/                   # Backend-for-Frontend сервіс
+│
+└── 📁 shared-charts/                     # Рівень 5: Єдиний шаблон (Umbrella Chart)
+    └── 📁 microservice-base/             # Щоб не дублювати YAML для 17 сервісів
+        ├── Chart.yaml
+        └── templates/
+            ├── deployment.yaml           # Дефолтний деплоймент (якщо не Canary)
+            ├── service.yaml              # K8s внутрішній сервіс
+            ├── virtual-service.yaml      # Маршрутизація Istio Traffic Splitting
+            ├── authorization-policy.yaml # Обмеження Istio (хто до кого має доступ)
+            └── servicemonitor.yaml       # Конфіг для Prometheus, щоб збирав метрики автоматично
+
+Етап 1: Платформа (Foundation)
+
+Це база. Без них кластер не буде безпечним та керованим.
+
+    Cilium: Встановлюємо першим, бо він відповідає за мережу та eBPF-інфраструктуру.
+
+    Vault + External Secrets Operator: Потрібні, щоб інші компоненти могли отримати доступ до секретів (наприклад, для баз даних).
+
+    Cert-Manager: Необхідний для генерації TLS-сертифікатів (зокрема для Istio та Ingress).
+
+    Karpenter: Після того, як мережа працює, додаємо автоскейлер, щоб кластер міг динамічно масштабуватися.
+
+    Kyverno: Впроваджуємо політики безпеки, щоб контролювати, що і як запускається в кластері.
+
+Етап 2: Спостережливість (Observability)
+
+Це має бути готовим до моменту запуску бізнес-логіки, щоб бачити, що відбувається.
+
+    Kube-prometheus-stack: База для метрик.
+
+    Loki-distributed: Збір логів.
+
+    Tempo + OpenTelemetry Collector: Для трейсингу.
+
+    Thanos: Якщо плануєш довгострокове зберігання метрик в S3.
+
+    DefectDojo: Сюди будуть стікатися дані про вразливості, коли почнеш деплоїти сервіси.
+
+Етап 3: Сервісний шар (Connectivity & Security)
+
+    Istio (Control Plane + Gateway): Тепер, коли база є, налаштовуємо Service Mesh для мікросервісів.
+
+    Falco: Рантайм-захист. Налаштовуємо на фінальному етапі інфраструктури.
+
+Етап 4: Дані (Stateful Layer)
+
+Найскладніший етап, бо вимагає коректного налаштування Persistent Volumes.
+
+    CloudNative-PG (Postgres): Починаємо з бази.
+
+    Redis-operator: Кешування.
+
+    Strimzi-kafka: Черги.
+
+    Clickhouse: Для аналітичних даних.
+
+Етап 5: Бізнес-сервіси (Core Services)
+
+    Shared Charts (Library): Спочатку деплоїмо твою бібліотеку чартів, щоб ArgoCD знав, звідки брати шаблони.
+
+    Core Microservices (15-17 аплікацій): Деплоїмо їх порціями (наприклад, спочатку gateway-bff та orders, потім все інше).
+
+
+
+
+
+1. Що має бути у values.yaml (Налаштування СТЕКУ)
+
+Це конфігурація "інфраструктурного рівня". Ви змінюєте ці параметри лише тоді, коли треба змінити поведінку самої системи моніторингу.
+
+    prometheus.prometheusSpec:
+
+        resources (requests/limits).
+
+        retention, retentionSize.
+
+        storageSpec (SC, розмір диска).
+
+        replicas (кількість подів).
+
+        remoteWrite (налаштування відправки у зовнішні системи).
+
+        thanos (конфіг sidecar-контейнера).
+
+        nodeSelector, tolerations (куди садити поди прометея).
+
+    grafana:
+
+        ingress (хости, TLS).
+
+        persistence (якщо зберігаємо базу дашбордів).
+
+        sidecar (налаштування автоматичного підхоплення дашбордів).
+
+    alertmanager.alertmanagerSpec:
+
+        Глобальні налаштування маршрутизації (SMTP, Slack, PagerDuty, Webhooks).
+
+    kubeStateMetrics / nodeExporter:
+
+        Вмикання/вимикання та налаштування лімітів ресурсів.
+
+2. Що має бути ОЦКРЕМИМИ маніфестами (Контент моніторингу)
+
+Це дані, які належать вашим додаткам або специфічним бізнес-задачам. Вони не повинні залежати від версії kube-prometheus-stack.
+
+    ServiceMonitor / PodMonitor:
+
+        Створюється поруч із вашим додатком (наприклад, у репозиторії my-api).
+
+        Чому: Розробник сам знає, на якому ендпоінті віддаються метрики.
+
+    PrometheusRule (Ваші алерти):
+
+        Створюється окремо. Повинні мати мітки, за якими їх знаходить прометей:
+        YAML
+
+        labels:
+          release: prometheus-stack # Щоб пром "побачив" правило
+          role: alert-rules         # Щоб правило попало у відповідний селектор
+
+    GrafanaDashboard:
+
+        Якщо ви використовуєте ConfigMap як джерело для Grafana (через sidecar), просто створюйте окремі ConfigMap з міткою grafana_dashboard: "1".
+
+    AlertmanagerConfig:
+
+        Специфічна маршрутизація (якщо команда А хоче отримувати алерти в Slack, а команда Б — на пошту). Ви не повинні редагувати головний alertmanager.config у values.yaml заради цього.
+
+    Probe:
+
+        Специфічні перевірки через Blackbox Exporter (наприклад, перевірка доступності зовнішнього API вашого партнера).
+
+Як тільки ти створюєш Ingress маніфест, контролер автоматично перечитує його і оновлює свою конфігурацію (nginx.conf) всередині себе.
+Як він знає, куди відправити? В маніфесті Ingress написано: "Якщо Host == grafana.daanggo.com, відправляй на Сервіс grafana".
+
+Трафік: Браузер -> Load Balancer IP -> Nginx Pod -> Service Virtual IP (10.43.x.x) -> Kernel/iptables -> Grafana Pod IP.

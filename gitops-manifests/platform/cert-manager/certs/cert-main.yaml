@@ -1,0 +1,14 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: crt-secret
+  namespace: application  
+spec:
+  secretName: crt-secret-v1 # Secret with crt from let's encrypt (public key + ) 
+  
+  issuerRef:
+    name: cluster-issuer  
+    kind: ClusterIssuer
+
+  dnsNames:
+    - daanggo.com 

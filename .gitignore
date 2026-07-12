@@ -11,3 +11,6 @@ dist/
 .DS_Store
 .vscode/
 .idea/
+./gitops-manifests/bootstrap/repo-credentials.yaml
+
+StrongPassword123

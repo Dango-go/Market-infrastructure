@@ -1,0 +1,49 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata: 
+  name: ingress-prometheus-rule
+  namespace: ingress-nginx
+  labels:
+    release: prometheus-stack   # For finding Operator
+    
+spec:
+  groups:
+      - name: nginx.rules
+        rules:
+        - alert: NginxIngressControllerDown
+          expr: absent(up{job=~".*ingress-nginx.*"} == 1)
+          for: 2m
+          labels:
+            severity: critical   # Add Label to firing metric
+          annotations:   # Also to metric for doc
+            summary: "Ingress NGINX controller is down"
+            description: "Prometheus cannot scrape ingress-nginx controller metrics."
+
+
+        - alert: NginxIngressHigh5xxRate
+          expr: |
+            (
+              sum(rate(nginx_ingress_controller_requests{status=~"5.."}[5m]))
+              /
+              sum(rate(nginx_ingress_controller_requests[5m]))
+            ) > 0.05
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High 5xx error rate on ingress-nginx"
+            description: "More than 5% of requests are returning 5xx for 5 minutes."
+            
+
+        - alert: NginxIngressHighLatency
+          expr: |
+            histogram_quantile(
+              0.95,
+              sum(rate(nginx_ingress_controller_request_duration_seconds_bucket[5m])) by (le, ingress, namespace)
+            ) > 2
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High p95 latency on ingress-nginx"
+            description: "p95 request latency is above 2 seconds for 10 minutes."
