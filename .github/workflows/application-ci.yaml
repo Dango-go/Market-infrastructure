@@ -77,23 +77,12 @@ jobs:
       with:
         fetch-depth: 0
 
-    # git diff
-    - name: Check for changes in service directory
-      id: filter    # (steps.filter.outputs.changed)
-      uses: dorny/paths-filter@v3  
-      with:
-        base: ${{ github.event.before }}
-        filters: |
-          changed:
-            - '${{ matrix.directory }}/**'
 
     - name: Set up Docker Buildx
-      if: steps.filter.outputs.changed == 'true'
       uses: docker/setup-buildx-action@v3
 
 
     - name: Build Image
-      if: steps.filter.outputs.changed == 'true'
       uses: docker/build-push-action@v6
       with:
         context: ${{ matrix.directory }}
@@ -105,7 +94,6 @@ jobs:
 
       #Security scanning with Trivy (Optional/Placeholder)
     - name: Run Trivy scanner
-      if: steps.filter.outputs.changed == 'true'
       uses: aquasecurity/trivy-action@master
       with:
         image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image_name }}:${{ github.sha }}
@@ -118,7 +106,6 @@ jobs:
       # Log in to GCP for get access token to authenticate with GAR and push Docker images in
     - name: Log in to GCP
       id: auth
-      if: steps.filter.outputs.changed == 'true'
       uses: google-github-actions/auth@v2 
       with:
         workload_identity_provider: ${{ secrets.WI_PROVIDER }}  # Address of the Workload Identity Provider. Go with token from GitHub Api.
@@ -128,7 +115,6 @@ jobs:
 
       # Write the access token to a config for docker client to authenticate with GAR
     - name: Login to GAR
-      if: steps.filter.outputs.changed == 'true'
       uses: docker/login-action@v3
       with:
         registry: europe-central2-docker.pkg.dev
@@ -137,7 +123,6 @@ jobs:
 
 
     - name: Push to Registry
-      if: steps.filter.outputs.changed == 'true'
       uses: docker/build-push-action@v6
       with:
         context: ${{ matrix.directory }}
