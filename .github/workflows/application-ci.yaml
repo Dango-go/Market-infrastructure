@@ -79,6 +79,11 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: Debug Secret
+      run: |
+        echo "DOCKERHUB_NAME is: '${{ secrets.DOCKERHUB_USERNAME }}'"
+
+
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
