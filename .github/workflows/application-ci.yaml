@@ -3,6 +3,8 @@ name: CI/CD Pipeline for Microservices
 on:
   push:
     branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
     paths:
       - 'app/**'
       - '.github/workflows/application-ci.yaml'
