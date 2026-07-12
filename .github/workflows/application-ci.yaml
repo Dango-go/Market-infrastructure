@@ -79,9 +79,11 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Debug Secret
+    - name: Debug Matrix Tags
       run: |
-        echo "DOCKERHUB_NAME is: '${{ secrets.DOCKERHUB_USERNAME }}'"
+        echo "Image name is: ${{ matrix.image_name }}"
+        echo "Secret is: ${{ secrets.DOCKERHUB_USERNAME }}"
+        echo "Full tag: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image_name }}:${{ github.sha }}"
 
 
 
