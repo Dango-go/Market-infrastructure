@@ -78,31 +78,15 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
+      
+    - name: Changed
+      id: changed
+      uses: tj-actions/changed-files@v45
+
 
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
-
-
-    - name: Build Image
-      uses: docker/build-push-action@v6
-      with:
-        context: ./app/backend
-        file: ${{ matrix.directory }}/Dockerfile
-        load: true
-        tags: dango17/${{ matrix.image_name }}:${{ github.sha }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-
-      #Security scanning with Trivy (Optional/Placeholder)
-    - name: Run Trivy scanner
-      uses: aquasecurity/trivy-action@master
-      with:
-        image-ref: dango17/${{ matrix.image_name }}:${{ github.sha }}
-        format: 'table'
-        exit-code: '0'
-        ignore-unfixed: true
-        severity: 'CRITICAL,HIGH'
 
 
       # Log in to GCP for get access token to authenticate with GAR and push Docker images in
@@ -125,13 +109,24 @@ jobs:
 
 
     - name: Push to Registry
+      if: contains(steps.changed.outputs.all_changed_files, matrix.directory)
       uses: docker/build-push-action@v6
       with:
         context: ./app/backend
         file: ${{ matrix.directory }}/Dockerfile
+        load: false
         push: true
         tags: |
-          dango17/${{ matrix.image_name }}:${{ github.sha }} 
           europe-central2-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_REPOSITORY }}/${{ matrix.image_name }}:${{ github.sha }}
-        cache-from: type=gha
+          
+      #Security scanning with Trivy (Optional/Placeholder)
+    - name: Run Trivy scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: europe-central2-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_REPOSITORY }}/${{ matrix.image_name }}:${{ github.sha }}
+        format: 'table'
+        exit-code: '0'
+        ignore-unfixed: true
+        severity: 'CRITICAL,HIGH'
+
 
