@@ -2,7 +2,7 @@ name: CI/CD Pipeline for Microservices
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "dev" ]
   pull_request:
     branches: [ "main" ]
     paths:
@@ -130,8 +130,8 @@ jobs:
         context: ${{ matrix.directory }}
         file: ${{ matrix.directory }}/Dockerfile
         push: true
-        tags: 
-            dango17/${{ matrix.image_name }}:${{ github.sha }}
-            europe-central2-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_REPOSITORY }}/${{ matrix.image_name }}:${{ github.sha }}
+        tags: |
+          dango17/${{ matrix.image_name }}:${{ github.sha }} 
+          europe-central2-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_REPOSITORY }}/${{ matrix.image_name }}:${{ github.sha }}
         cache-from: type=gha
 
