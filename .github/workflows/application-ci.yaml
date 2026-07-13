@@ -110,7 +110,7 @@ jobs:
       id: auth
       uses: google-github-actions/auth@v2 
       with:
-        workload_identity_provider: ${{ secrets.WI_PROVIDER }}  # Address of the Workload Identity Provider. Go with token from GitHub Api.
+        workload_identity_provider: ${{ secrets.WORKLOAD_PROVIDER }}  # Address of the Workload Identity Provider. Go with token from GitHub Api.
         service_account: ${{ secrets.SERVICE_ACCOUNT }}
         token_format: 'access_token'  # Here in this variable we will get the access token to authenticate with GAR
 
