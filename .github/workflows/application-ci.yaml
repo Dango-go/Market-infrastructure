@@ -88,7 +88,7 @@ jobs:
       uses: docker/build-push-action@v6
       with:
         context: ./app/backend
-        file: ./${{ matrix.directory }}/Dockerfile
+        file: ${{ matrix.directory }}/Dockerfile
         load: true
         tags: dango17/${{ matrix.image_name }}:${{ github.sha }}
         cache-from: type=gha
@@ -127,7 +127,7 @@ jobs:
     - name: Push to Registry
       uses: docker/build-push-action@v6
       with:
-        context: ${{ matrix.directory }}
+        context: ./app/backend
         file: ${{ matrix.directory }}/Dockerfile
         push: true
         tags: |
