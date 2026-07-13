@@ -86,11 +86,13 @@ jobs:
 
 
     - name: Set up Docker Buildx
+
       uses: docker/setup-buildx-action@v3
 
 
       # Log in to GCP for get access token to authenticate with GAR and push Docker images in
     - name: Log in to GCP
+
       id: auth
       uses: google-github-actions/auth@v2 
       with:
@@ -101,6 +103,7 @@ jobs:
 
       # Write the access token to a config for docker client to authenticate with GAR
     - name: Login to GAR
+
       uses: docker/login-action@v3
       with:
         registry: europe-central2-docker.pkg.dev
@@ -109,24 +112,24 @@ jobs:
 
 
     - name: Push to Registry
-      if: contains(steps.changed.outputs.all_changed_files, matrix.directory)
+
       uses: docker/build-push-action@v6
       with:
         context: ./app/backend
         file: ${{ matrix.directory }}/Dockerfile
-        load: false
+        load: true  # Save on Github
         push: true
         tags: |
           europe-central2-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_REPOSITORY }}/${{ matrix.image_name }}:${{ github.sha }}
           
-      #Security scanning with Trivy (Optional/Placeholder)
-    - name: Run Trivy scanner
+
+    - name: Trivy
+
       uses: aquasecurity/trivy-action@master
       with:
         image-ref: europe-central2-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_REPOSITORY }}/${{ matrix.image_name }}:${{ github.sha }}
+        image-src: local   # Search images only on local docker daemon
         format: 'table'
         exit-code: '0'
         ignore-unfixed: true
         severity: 'CRITICAL,HIGH'
-
-
