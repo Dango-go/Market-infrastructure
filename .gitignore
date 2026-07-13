@@ -13,4 +13,4 @@ dist/
 .idea/
 ./gitops-manifests/bootstrap/repo-credentials.yaml
 
- 
+README.md
