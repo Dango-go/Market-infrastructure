@@ -125,7 +125,7 @@ jobs:
        
       uses: aquasecurity/trivy-action@master
       with:
-        image-ref: europe-central2-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_REPOSITORY }}/${{ matrix.image_name }}:${{ github.sha }}
+        image-ref: europe-central2-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_REPOSITORY }}/${{ matrix.image_name }}:latest
         image-src: local   # Search images only on local docker daemon
         format: 'table'
         exit-code: '0'
