@@ -2,11 +2,10 @@ apiVersion: apps/v1
  
 kind: Deployment
 metadata:
-  name: auth
+  name: analytics
   namespace: application
   labels:
-    app: auth
-    tier: backend
+    application: service
   annotations:
     env: dev
 spec:
@@ -14,7 +13,7 @@ spec:
 
   selector:
     matchLabels:
-      app: auth
+      app: v
       tier: backend
 
   strategy:
@@ -29,11 +28,9 @@ spec:
   template:
     metadata:
       labels:
- 
-        app: payment
+        app: analytics
         tier: backend
-      annotations:
-        checksum/config: "a1b2c3d4e5f6"
+
 
     spec:
       #imagePullSecrets:
@@ -64,11 +61,11 @@ spec:
 
  
       containers:
-        - name: auth
-          image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/auth-service
+        - name: analytics
+          image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/auth-service:latest
           imagePullPolicy: IfNotPresent  
 
- 
+          # docs which port listen
           ports:
             - name: http
               containerPort: 8080
@@ -78,56 +75,52 @@ spec:
  
           resources:
             requests:
- 
               cpu: 250m
               memory: 512Mi
             limits:
-   
               cpu: 1000m
               memory: 1Gi
 
- 
           env:
+            - name: SERVICE_NAME
+              value: analytics-service
+
+            - name: JWT_ISSUER
+              value: "embedded-market-auth"
  
-            - name: LOG_LEVEL
-              value: "info"
- 
-            - name: DATABASE_HOST
+            - name: JWT_AUDIENCE
+              value: "embedded-market"
+
+            - name: POSTGRES_USER
               valueFrom:
-                configMapKeyRef:
-                  name: payment-config
-                  key: db_host
-            
- 
-            - name: DATABASE_PASSWORD
+                secretKeyRef:
+                  name: db-credentials
+                  key: username
+            - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: db-credentials
                   key: password
+            - name: POSTGRES_DSN
+              value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@analytics-db-rw:5432/analytics?sslmode=verify-full"  
             
- 
-            - name: MY_POD_NAME
+            # JWT
+            - name: JWT_PUBLIC_KEY_FILE
               valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            - name: MY_NODE_IP
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.hostIP
+                secretKeyRef:
+                  name: jwt-token
+                  key: public_key.pem
+            
+            - name: HTTP_PORT
+              value: "8094"
+            
+            - name: LOG_LEVEL
+              value: "debug"
+
+            - name: ENVIRONMENT
+              value: development
 
  
-          envFrom:
-            - configMapRef:
-                name: payment-global-config
-
- 
-          volumeMounts:
-            - name: app-config-file
-              mountPath: /etc/config/app.yml  
-              subPath: app.yml
-              readOnly: true
-            - name: tmp-storage
-              mountPath: /tmp  
  
           securityContext:
             allowPrivilegeEscalation: false  
@@ -138,25 +131,25 @@ spec:
  
           startupProbe:
             httpGet:
-              path: /actuator/health/liveness
-              port: 8080
+              path: /healthz
+              port: 8094
             failureThreshold: 30
             periodSeconds: 10
 
  
           livenessProbe:
             httpGet:
-              path: /actuator/health/liveness
-              port: 8080
+              path: /healthz
+              port: 8094
             initialDelaySeconds: 5  
             periodSeconds: 10       
             timeoutSeconds: 3       
-            failureThreshold: 3     
+            failureThreshold: 2     
  
           readinessProbe:
             httpGet:
-              path: /actuator/health/readiness
-              port: 8080
+              path: /readyz
+              port: 8094
             initialDelaySeconds: 5
             periodSeconds: 10
             successThreshold: 1  
@@ -170,67 +163,58 @@ spec:
 
  
       nodeSelector:
-        type: high-cpu
+        type: development
 
       affinity:
  
         nodeAffinity:
  
-          preferredDuringSchedulingIgnoredDuringExecution:
+          preferredDuringSchedulingIgnoredDuringExecution:  # soft
             - weight: 100
               preference:
                 matchExpressions:
                   - key: topology.kubernetes.io/zone
                     operator: In
                     values:
-                      - eu-central-1a
+                      - "europe-central2"
  
         podAffinity:
  
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 50
+          preferredDuringSchedulingIgnoredDuringExecution:  
+            - weight: 75
               podAffinityTerm:
                 labelSelector:
                   matchExpressions:
-                    - key: app
+                    - key: kubernetes.io/db
                       operator: In
-                      values:
-                        - redis-cache
-                topologyKey: kubernetes.io/hostname
+                      values: 
+                        - auth
+                       
+                topologyKey: kubernetes.io/hostname   # Group by this label
  
         podAntiAffinity:
  
           requiredDuringSchedulingIgnoredDuringExecution:
             - labelSelector:
                 matchExpressions:
-                  - key: app
+                  - key: env
                     operator: In
                     values:
-                      - payment
+                      - production
               topologyKey: kubernetes.io/hostname
  
       topologySpreadConstraints:
-        - maxSkew: 1
+        - maxSkew: 1    
           topologyKey: topology.kubernetes.io/zone
-          whenUnsatisfiable: DoNotSchedule
+          whenUnsatisfiable: DoNotSchedule  # ScheduleAnyway alternative
           labelSelector:
             matchLabels:
               app: payment
 
  
       tolerations:
-        - key: "dedicated"
+        - key: "type"
           operator: "Equal"
-          value: "payment"
+          value: "development"
           effect: "NoSchedule"
  
-      volumes:
- 
-        - name: app-config-file
-          configMap:
-            name: payment-config
- 
-        - name: tmp-storage
-          emptyDir:
- 
-            sizeLimit: 500Mi

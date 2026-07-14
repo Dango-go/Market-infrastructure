@@ -1,0 +1,216 @@
+apiVersion: apps/v1
+ 
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: application
+  labels:
+    application: service
+  annotations:
+    env: dev
+
+
+spec:
+  replicas: 3  
+
+  selector:
+    matchLabels:
+      app: api-gateway
+      tier: backend
+
+  strategy:
+    type: RollingUpdate 
+    rollingUpdate:
+      maxUnavailable: 25%  # Min 75% work
+      maxSurge: 25%  # Min create at the one update
+
+  template:
+    metadata:
+      labels:
+ 
+        app: api-gateway
+        tier: backend
+
+    spec:
+      #imagePullSecrets:
+        #- name: gitlab-registry-secret
+
+      terminationGracePeriodSeconds: 40
+
+      securityContext:
+        runAsNonRoot: true  
+        runAsUser: 1000     
+        fsGroup: 2000       
+
+ 
+      #initContainers:
+        #- name: wait-for-database
+          #image: busybox:1.36
+ 
+          #command: ['sh', '-c', 'until nc -z db-service.default.svc.cluster.local 5432; do echo "waiting for db"; sleep 2; done;']
+
+        #- name: run-database-migrations
+          #image: my-registry/payment-service-migrations:v1.2.0
+ 
+          #envFrom:
+            #- secretRef:
+                #name: db-credentials
+
+      containers:
+        - name: api-gateway
+          image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/api-gateway-service/ 
+          imagePullPolicy: IfNotPresent  
+
+          # docs which port listen
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+ 
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+
+          env:
+            - name: SERVICE_NAME
+              value: analytics-service
+
+            - name: JWT_ISSUER
+              value: "embedded-market-auth"
+ 
+            - name: JWT_AUDIENCE
+              value: "embedded-market"
+
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: password
+            - name: POSTGRES_DSN
+              value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@analytics-db-rw:5432/analytics?sslmode=verify-full"  
+            
+            # JWT
+            - name: JWT_PUBLIC_KEY_FILE
+              valueFrom:
+                secretKeyRef:
+                  name: jwt-token
+                  key: public_key.pem
+            
+            - name: HTTP_PORT
+              value: "8094"
+            
+            - name: LOG_LEVEL
+              value: "debug"
+
+            - name: ENVIRONMENT
+              value: development
+
+ 
+ 
+          securityContext:
+            allowPrivilegeEscalation: false  
+            readOnlyRootFilesystem: true    
+            capabilities:
+              drop: ["ALL"]                  
+
+ 
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 8094
+            failureThreshold: 30
+            periodSeconds: 10
+
+ 
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8094
+            initialDelaySeconds: 5  
+            periodSeconds: 10       
+            timeoutSeconds: 3       
+            failureThreshold: 2     
+ 
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8094
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1  
+
+   
+          lifecycle:
+            preStop:
+ 
+              exec:
+                command: ["sh", "-c", "sleep 10"]
+
+ 
+      nodeSelector:
+        type: development
+
+      affinity:
+ 
+        nodeAffinity:
+ 
+          preferredDuringSchedulingIgnoredDuringExecution:  # soft
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: topology.kubernetes.io/zone
+                    operator: In
+                    values:
+                      - "europe-central2"
+ 
+        podAffinity:
+ 
+          preferredDuringSchedulingIgnoredDuringExecution:  
+            - weight: 75
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: kubernetes.io/db
+                      operator: In
+                      values: 
+                        - auth
+                       
+                topologyKey: kubernetes.io/hostname   # Group by this label
+ 
+        podAntiAffinity:
+ 
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: env
+                    operator: In
+                    values:
+                      - production
+              topologyKey: kubernetes.io/hostname
+ 
+      topologySpreadConstraints:
+        - maxSkew: 1    
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule  # ScheduleAnyway alternative
+          labelSelector:
+            matchLabels:
+              app: payment
+
+ 
+      tolerations:
+        - key: "type"
+          operator: "Equal"
+          value: "development"
+          effect: "NoSchedule"
+ 
