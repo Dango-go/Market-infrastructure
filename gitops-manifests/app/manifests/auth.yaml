@@ -65,7 +65,7 @@ spec:
  
       containers:
         - name: auth
-          image: my-registry/payment-service:v1.2.0
+          image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/auth-service
           imagePullPolicy: IfNotPresent  
 
  

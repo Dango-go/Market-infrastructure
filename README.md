@@ -624,3 +624,7 @@ gitops-manifests/
 Як він знає, куди відправити? В маніфесті Ingress написано: "Якщо Host == grafana.daanggo.com, відправляй на Сервіс grafana".
 
 Трафік: Браузер -> Load Balancer IP -> Nginx Pod -> Service Virtual IP (10.43.x.x) -> Kernel/iptables -> Grafana Pod IP.
+
+Google Artifact Registry (ПОВНИЙ ШЛЯХ)
+europe-central2-docker.pkg.dev / [ПРОЄКТ] / [РЕПОЗИТОРІЙ] / [НАЗВА_ПАКЕТА] : [ТЕГ]
+image: europe-central2-docker.pkg.dev/PROJECT_ID/REPOSITORY/IMAGE_NAME:TAG
