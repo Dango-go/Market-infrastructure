@@ -2,7 +2,7 @@ apiVersion: apps/v1
  
 kind: Deployment
 metadata:
-  name: analytics
+  name: cart 
   namespace: application
   labels:
     application: service
@@ -13,7 +13,7 @@ spec:
 
   selector:
     matchLabels:
-      app: analytics
+      app: cart
       tier: backend
 
   strategy:
@@ -28,9 +28,9 @@ spec:
   template:
     metadata:
       labels:
- 
-        app: analytics
+        app: cart
         tier: backend
+
 
     spec:
       #imagePullSecrets:
@@ -61,14 +61,14 @@ spec:
 
  
       containers:
-        - name: analytics
+        - name: cart
           image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/auth-service:latest
           imagePullPolicy: IfNotPresent  
 
           # docs which port listen
           ports:
             - name: http
-              containerPort: 8094
+              containerPort: 80
               protocol: TCP
             - name: metrics
               containerPort: 9090
@@ -83,10 +83,13 @@ spec:
 
           env:
             - name: SERVICE_NAME
-              value: analytics-service
+              value: "catalog-service"
 
             - name: JWT_ISSUER
               value: "embedded-market-auth"
+            
+            - name: KAFKA_BROKERS
+              value: kafka:9092
  
             - name: JWT_AUDIENCE
               value: "embedded-market"
@@ -94,15 +97,15 @@ spec:
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
-                  name: db-credentials
+                  name: db-credential-catalog
                   key: username
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: db-credentials
+                  name: db-credentials-catalog
                   key: password
             - name: POSTGRES_DSN
-              value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@analytics-db-rw:5432/analytics?sslmode=verify-full"  
+              value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@catalog-db-rw:5432/analytics?sslmode=verify-full"  
             
             # JWT
             - name: JWT_PUBLIC_KEY_FILE
@@ -112,10 +115,10 @@ spec:
                   key: public_key.pem
             
             - name: HTTP_PORT
-              value: "8094"
+              value: "8083"
             
             - name: LOG_LEVEL
-              value: "debug"
+              value: "info"
 
             - name: ENVIRONMENT
               value: development
@@ -132,7 +135,7 @@ spec:
           startupProbe:
             httpGet:
               path: /healthz
-              port: 8094
+              port: 8083
             failureThreshold: 30
             periodSeconds: 10
 
@@ -140,7 +143,7 @@ spec:
           livenessProbe:
             httpGet:
               path: /healthz
-              port: 8094
+              port: 8083
             initialDelaySeconds: 5  
             periodSeconds: 10       
             timeoutSeconds: 3       
@@ -149,7 +152,7 @@ spec:
           readinessProbe:
             httpGet:
               path: /readyz
-              port: 8094
+              port: 8083
             initialDelaySeconds: 5
             periodSeconds: 10
             successThreshold: 1  
@@ -188,7 +191,7 @@ spec:
                     - key: kubernetes.io/db
                       operator: In
                       values: 
-                        - analytics
+                        - catalog
                        
                 topologyKey: kubernetes.io/hostname   # Group by this label
  
