@@ -58,7 +58,7 @@ spec:
 
       containers:
         - name: api-gateway
-          image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/api-gateway-service/ 
+          image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/api-gateway-service:latest
           imagePullPolicy: IfNotPresent  
 
           # docs which port listen
@@ -77,28 +77,21 @@ spec:
               cpu: 1000m
               memory: 1Gi
 
+          # All URLs services             
+          envFrom:
+            - configMapRef:
+                name: services-urls
+
+
           env:
             - name: SERVICE_NAME
-              value: analytics-service
+              value: "api-gateway-service"
 
             - name: JWT_ISSUER
               value: "embedded-market-auth"
  
             - name: JWT_AUDIENCE
               value: "embedded-market"
-
-            - name: POSTGRES_USER
-              valueFrom:
-                secretKeyRef:
-                  name: db-credentials
-                  key: username
-            - name: POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: db-credentials
-                  key: password
-            - name: POSTGRES_DSN
-              value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@analytics-db-rw:5432/analytics?sslmode=verify-full"  
             
             # JWT
             - name: JWT_PUBLIC_KEY_FILE
@@ -108,13 +101,13 @@ spec:
                   key: public_key.pem
             
             - name: HTTP_PORT
-              value: "8094"
+              value: "8080"
             
             - name: LOG_LEVEL
-              value: "debug"
+              value: "info"
 
             - name: ENVIRONMENT
-              value: development
+              value: "development"
 
  
  
@@ -128,7 +121,7 @@ spec:
           startupProbe:
             httpGet:
               path: /healthz
-              port: 8094
+              port: 8080
             failureThreshold: 30
             periodSeconds: 10
 
@@ -136,7 +129,7 @@ spec:
           livenessProbe:
             httpGet:
               path: /healthz
-              port: 8094
+              port: 8080
             initialDelaySeconds: 5  
             periodSeconds: 10       
             timeoutSeconds: 3       
@@ -145,7 +138,7 @@ spec:
           readinessProbe:
             httpGet:
               path: /readyz
-              port: 8094
+              port: 8080
             initialDelaySeconds: 5
             periodSeconds: 10
             successThreshold: 1  
