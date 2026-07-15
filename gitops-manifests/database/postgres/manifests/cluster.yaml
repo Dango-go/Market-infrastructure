@@ -1,0 +1,95 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster   
+metadata:
+  name: postgres-cluster
+  namespace: storage
+  labels:
+    environment: development
+spec:  
+  instances: 3
+ 
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.2
+
+  resources:
+    requests:
+      cpu: "250m" # Milicores
+      memory: "1.5Gi"
+    limits:
+      cpu: "500m"
+      memory: "1.5Gi" 
+
+  storage:
+    size: 30Gi  # Create pvc 
+ 
+    storageClass: premium-rwo
+
+ 
+  walStorage:
+    size: 3Gi
+    storageClass: premium-rwo
+ 
+  
+  postgresql:
+    parameters:
+ 
+      shared_buffers: "1GB"        
+      work_mem: "16MB"
+      maintenance_work_mem: "256MB"
+      effective_cache_size: "3GB"  
+      max_connections: "300"
+      
+ 
+      log_destination: "csvlog"
+      logging_collector: "on"
+      log_statement: "ddl"         
+      log_min_duration_statement: "1000"  
+ 
+  affinity:
+    enablePodAntiAffinity: true
+    topologyKey: topology.kubernetes.io/zone  
+ 
+  monitoring:
+    enablePodMonitor: true  
+ 
+  bootstrap:
+    initdb:
+      database: my_production_app  
+      owner: app_user           
+ 
+      secret:
+        name: my-app-db-credentials
+ 
+  backup:
+ 
+    retentionPolicy: "30d"
+    barmanObjectStore:
+ 
+      destinationPath: "s3://my-company-db-backups/prod-postgres-cluster/"
+      endpointURL: "https://s3.eu-central-1.amazonaws.com"
+      s3Credentials:
+        accessKeyId:
+          name: aws-s3-creds
+          key: ACCESS_KEY_ID
+        secretAccessKey:
+          name: aws-s3-creds
+          key: ACCESS_SECRET_KEY
+ 
+      wal:
+        compression: gzip
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Pooler
+metadata:
+  name: prod-postgres-pooler
+  namespace: database
+spec:
+  cluster:
+    name: prod-postgres-cluster
+  instances: 2
+  type: rw  
+  pgbouncer:
+    poolMode: transaction  
+    parameters:
+      max_client_conn: "1000"
+      default_pool_size: "50"

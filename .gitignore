@@ -11,5 +11,7 @@ dist/
 .DS_Store
 .vscode/
 .idea/
-/gitops-manifests/bootstrap/manifests/repo-credentials.yaml
+/gitops-manifests/argo/manifests/repo-credentials.yaml
 README.md
+notes.md
+/gitops-manifests/secrets

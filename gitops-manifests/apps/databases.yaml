@@ -1,14 +1,14 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: monitoring
-  namespace: app   # App place 
+  name: databases
+  namespace: app   
 spec:
   project: default
   source:
     repoURL: git@github.com:Dango-go/Market-infrastructure.git 
     targetRevision: HEAD  
-    path: gitops-manifests/platform/monitoring
+    path: gitops-manifests/database
   destination:
     server: https://kubernetes.default.svc
-    namespace: monitoring # Place deployment
+    namespace: storage  

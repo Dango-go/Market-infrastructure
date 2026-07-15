@@ -5,12 +5,14 @@ metadata:
   namespace: argocd
 spec:
   sourceRepo:
-    - 'git@github.com:Dango-go/Market-infrastructure.git'
+    - 'git@github.com:Dango-go/Market-infrastructure.git'   # Create if source this repo 
 
+  # Resource which can deploy with type ClusterRole
   clusterResourceWhitelist:
   - group: ""
     kind: Namespace  
   
+  # Resource which can deploy with type ns
   namespaceResourceWhitelist:
   - group: "*"
     kind: "*"  
