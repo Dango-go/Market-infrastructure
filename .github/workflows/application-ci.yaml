@@ -3,8 +3,6 @@ name: CI/CD Pipeline for Microservices
 on:
   push:
     branches: [ "dev" ]
-  pull_request:
-    branches: [ "main" ]
     paths:
       - 'app/**'
       - '.github/workflows/application-ci.yaml'
@@ -71,6 +69,9 @@ jobs:
           - service: wishlist
             directory: app/backend/services/wishlist
             image_name: wishlist-service
+          - service: frontend
+            directory: app/frontend
+            image_name: frontend-service
 
     # git clone, fetch
     steps:
@@ -86,13 +87,13 @@ jobs:
 
 
     - name: Set up Docker Buildx
- 
+      if: contains(steps.changed.outputs.all_changed_files, matrix.directory)
       uses: docker/setup-buildx-action@v3
 
 
       # Log in to GCP for get access token to authenticate with GAR and push Docker images in
     - name: Log in to GCP
-       
+      if: contains(steps.changed.outputs.all_changed_files, matrix.directory)
       id: auth
       uses: google-github-actions/auth@v2 
       with:
@@ -103,6 +104,7 @@ jobs:
 
       # Write the access token to a config for docker client to authenticate with GAR
     - name: Login to GAR
+      if: contains(steps.changed.outputs.all_changed_files, matrix.directory)
       uses: docker/login-action@v3
       with:
         registry: europe-central2-docker.pkg.dev
@@ -111,18 +113,17 @@ jobs:
 
 
     - name: Push to Registry
-       
+      if: contains(steps.changed.outputs.all_changed_files, matrix.directory)
       uses: docker/build-push-action@v6
       with:
-        context: ./app/backend
+        context: ./app
         file: ${{ matrix.directory }}/Dockerfile
-        load: true  # Save on Github
         push: true
         tags: |
           europe-central2-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_REPOSITORY }}/${{ matrix.image_name }}:latest
 
     - name: Trivy
-       
+      if: contains(steps.changed.outputs.all_changed_files, matrix.directory)
       uses: aquasecurity/trivy-action@master
       with:
         image-ref: europe-central2-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_REPOSITORY }}/${{ matrix.image_name }}:latest
