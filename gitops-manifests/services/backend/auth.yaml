@@ -2,7 +2,7 @@ apiVersion: apps/v1
  
 kind: Deployment
 metadata:
-  name: analytics
+  name: auth
   namespace: application
   labels:
     application: service
@@ -61,14 +61,14 @@ spec:
 
  
       containers:
-        - name: analytics
+        - name: auth
           image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/auth-service:latest
           imagePullPolicy: IfNotPresent  
 
           # docs which port listen
           ports:
             - name: http
-              containerPort: 8080
+              containerPort: 8081
               protocol: TCP
             - name: metrics
               containerPort: 9090
@@ -94,18 +94,8 @@ spec:
             - name: JWT_AUDIENCE
               value: "embedded-market"
 
-            - name: POSTGRES_USER
-              valueFrom:
-                secretKeyRef:
-                  name: db-credential-auth
-                  key: username
-            - name: POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: db-credentials-auth
-                  key: password
             - name: POSTGRES_DSN
-              value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@auth-db-rw:5432/analytics?sslmode=verify-full"  
+              value: "postgres://auth:auth@auth-db:5432/auth?sslmode=disable"  
             
             # JWT
             - name: JWT_PRIVATE_KEY_FILE
@@ -212,7 +202,7 @@ spec:
           whenUnsatisfiable: DoNotSchedule  # ScheduleAnyway alternative
           labelSelector:
             matchLabels:
-              app: payment
+              app: auth
 
  
       tolerations:
@@ -221,3 +211,28 @@ spec:
           value: "development"
           effect: "NoSchedule"
  
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: application
+  labels:
+    application: service
+    app: auth
+    tier: backend
+spec:
+  type: ClusterIP
+  selector:
+    app: auth
+    tier: backend
+  ports:
+    - name: http
+      port: 8081
+      targetPort: 8081
+      protocol: TCP
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+      protocol: TCP

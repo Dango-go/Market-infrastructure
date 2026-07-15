@@ -62,7 +62,7 @@ spec:
  
       containers:
         - name: analytics
-          image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/auth-service:latest
+          image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/analytics-service:latest
           imagePullPolicy: IfNotPresent  
 
           # docs which port listen
@@ -78,7 +78,7 @@ spec:
               cpu: 250m
               memory: 512Mi
             limits:
-              cpu: 1000m
+              cpu: 700m
               memory: 1Gi
 
           env:
@@ -91,18 +91,8 @@ spec:
             - name: JWT_AUDIENCE
               value: "embedded-market"
 
-            - name: POSTGRES_USER
-              valueFrom:
-                secretKeyRef:
-                  name: db-credentials
-                  key: username
-            - name: POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: db-credentials
-                  key: password
             - name: POSTGRES_DSN
-              value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@analytics-db-rw:5432/analytics?sslmode=verify-full"  
+              value: "postgres://analytics:analytics@analytics-db:5432/analytics?sslmode=disable"  
             
             # JWT
             - name: JWT_PUBLIC_KEY_FILE
@@ -209,7 +199,7 @@ spec:
           whenUnsatisfiable: DoNotSchedule  # ScheduleAnyway alternative
           labelSelector:
             matchLabels:
-              app: payment
+              app: analytics
 
  
       tolerations:
@@ -218,3 +208,28 @@ spec:
           value: "development"
           effect: "NoSchedule"
  
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: analytics-service
+  namespace: application
+  labels:
+    application: service
+    app: analytics
+    tier: backend
+spec:
+  type: ClusterIP
+  selector:
+    app: analytics
+    tier: backend
+  ports:
+    - name: http
+      port: 8094
+      targetPort: 8094
+      protocol: TCP
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+      protocol: TCP

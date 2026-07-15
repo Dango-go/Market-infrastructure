@@ -2,7 +2,7 @@ apiVersion: apps/v1
  
 kind: Deployment
 metadata:
-  name: cart 
+  name: shipping
   namespace: application
   labels:
     application: service
@@ -13,7 +13,7 @@ spec:
 
   selector:
     matchLabels:
-      app: cart
+      app: shipping
       tier: backend
 
   strategy:
@@ -28,9 +28,9 @@ spec:
   template:
     metadata:
       labels:
-        app: cart
+ 
+        app: shipping
         tier: backend
-
 
     spec:
       #imagePullSecrets:
@@ -57,18 +57,18 @@ spec:
  
           #envFrom:
             #- secretRef:
-                #name: db-credentials
+                #name: db-credentials-shipping
 
  
       containers:
-        - name: cart
-          image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/auth-service:latest
+        - name: shipping
+          image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/shipping-service:latest
           imagePullPolicy: IfNotPresent  
 
           # docs which port listen
           ports:
             - name: http
-              containerPort: 80
+              containerPort: 8088
               protocol: TCP
             - name: metrics
               containerPort: 9090
@@ -83,19 +83,19 @@ spec:
 
           env:
             - name: SERVICE_NAME
-              value: "cart-service"
+              value: shipping-service
 
             - name: JWT_ISSUER
               value: "embedded-market-auth"
-            
-            - name: KAFKA_BROKERS
-              value: kafka:9092
  
             - name: JWT_AUDIENCE
               value: "embedded-market"
 
+            - name: KAFKA_BROKERS
+              value: kafka:9092
+
             - name: POSTGRES_DSN
-              value: "postgres://cart:cart@cart-db:5432/cart?sslmode=disable"
+              value: "postgres://shipping:shipping@shipping-db:5432/shipping?sslmode=disable"  
             
             # JWT
             - name: JWT_PUBLIC_KEY_FILE
@@ -105,7 +105,7 @@ spec:
                   key: public_key.pem
             
             - name: HTTP_PORT
-              value: "8086"
+              value: "8088"
             
             - name: LOG_LEVEL
               value: "info"
@@ -125,7 +125,7 @@ spec:
           startupProbe:
             httpGet:
               path: /healthz
-              port: 8086
+              port: 8088
             failureThreshold: 30
             periodSeconds: 10
 
@@ -133,7 +133,7 @@ spec:
           livenessProbe:
             httpGet:
               path: /healthz
-              port: 8086
+              port: 8088
             initialDelaySeconds: 5  
             periodSeconds: 10       
             timeoutSeconds: 3       
@@ -142,7 +142,7 @@ spec:
           readinessProbe:
             httpGet:
               path: /readyz
-              port: 8086
+              port: 8088
             initialDelaySeconds: 5
             periodSeconds: 10
             successThreshold: 1  
@@ -181,7 +181,7 @@ spec:
                     - key: kubernetes.io/db
                       operator: In
                       values: 
-                        - cart
+                        - shipping
                        
                 topologyKey: kubernetes.io/hostname   # Group by this label
  
@@ -202,7 +202,7 @@ spec:
           whenUnsatisfiable: DoNotSchedule  # ScheduleAnyway alternative
           labelSelector:
             matchLabels:
-              app: payment
+              app: shipping
 
  
       tolerations:
@@ -216,21 +216,21 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: cart-service
+  name: shipping-service
   namespace: application
   labels:
     application: service
-    app: cart
+    app: shipping
     tier: backend
 spec:
   type: ClusterIP
   selector:
-    app: cart
+    app: shipping
     tier: backend
   ports:
     - name: http
-      port: 8086
-      targetPort: 8086
+      port: 8088
+      targetPort: 8088
       protocol: TCP
     - name: metrics
       port: 9090
