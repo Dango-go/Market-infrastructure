@@ -19,7 +19,7 @@ jobs:
     
     strategy:
       matrix:
-        service: [analytics, api-gateway, auth, cart, catalog, inventory, notification, order, payment, pricing, recommendation, review, search, shipping, user, wishlist]
+        service: [analytics, api-gateway, auth, cart, catalog, inventory, notification, order, payment, pricing, recommendation, review, search, shipping, user, wishlist, frontend]
         include:
           - service: analytics 
             directory: app/backend/services/analytics
@@ -93,7 +93,7 @@ jobs:
 
       # Log in to GCP for get access token to authenticate with GAR and push Docker images in
     - name: Log in to GCP
-    
+      
       id: auth
       uses: google-github-actions/auth@v2 
       with:
@@ -104,7 +104,7 @@ jobs:
 
       # Write the access token to a config for docker client to authenticate with GAR
     - name: Login to GAR
-      
+       
       uses: docker/login-action@v3
       with:
         registry: europe-central2-docker.pkg.dev
@@ -113,7 +113,7 @@ jobs:
 
 
     - name: Push to Registry (backend)
-        
+      if: matrix.service != 'frontend' && contains(steps.changed.outputs.all_changed_files, matrix.directory)
       uses: docker/build-push-action@v6
       with:
         context: ./app/backend
@@ -124,7 +124,7 @@ jobs:
       
 
     - name: Push to Registry (frontend)
-     
+      if: matrix.service == 'frontend'
       uses: docker/build-push-action@v6
       with:
         context: ./app/frontend
@@ -134,7 +134,7 @@ jobs:
           europe-central2-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_REPOSITORY }}/${{ matrix.image_name }}:latest
 
     - name: Trivy
-     
+      if: contains(steps.changed.outputs.all_changed_files, matrix.directory)
       uses: aquasecurity/trivy-action@master
       with:
         image-ref: europe-central2-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_REPOSITORY }}/${{ matrix.image_name }}:latest
@@ -143,3 +143,6 @@ jobs:
         exit-code: '0'
         ignore-unfixed: true
         severity: 'CRITICAL'
+
+
+# if: contains(steps.changed.outputs.all_changed_files, matrix.directory) 
