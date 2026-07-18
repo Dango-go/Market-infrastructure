@@ -95,8 +95,8 @@ spec:
               value: kafka:9092
 
             - name: POSTGRES_DSN
-              value: "postgres://order:order@order-db:5432/order?sslmode=disable"  
-            
+              value: "postgres://order:order@postgres-cluster-rw:5432/order-db-v1?sslmode=disable"
+
             # JWT
             - name: JWT_PUBLIC_KEY_FILE
               valueFrom:

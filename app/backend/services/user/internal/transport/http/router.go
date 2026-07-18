@@ -20,12 +20,14 @@ func NewRouter(d RouterDeps) *gin.Engine {
 	engine := gin.New()
 	engine.Use(
 		middleware.RequestContext(),
+		middleware.HTTPMetrics("user"),
 		middleware.Logging(d.Logger),
 		middleware.Recovery(),
 	)
 
 	engine.GET("/healthz", d.System.Healthz)
 	engine.GET("/readyz", d.System.Readyz)
+	engine.GET("/metrics", middleware.PrometheusHandler("user"))
 
 	v1 := engine.Group("/api/v1/users")
 	authed := v1.Group("/me")

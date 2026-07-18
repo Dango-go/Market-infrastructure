@@ -1,0 +1,174 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: analytics-user   # Resource name
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster # cluster name
+  name: analytics   # User name
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: api-gateway-user
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster
+  name: api-gateway
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: auth-user
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster
+  name: auth
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: cart-user
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster
+  name: cart
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: catalog-user
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster
+  name: catalog
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: inventory-user
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster
+  name: inventory
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: notification-user
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster
+  name: notification
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: order-user
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster
+  name: order
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: payment-user
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster
+  name: payment
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: pricing-user
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster
+  name: pricing
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: recommendation-user
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster
+  name: recommendation
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: review-user
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster
+  name: review
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: search-user
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster
+  name: search
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: shipping-user
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster
+  name: shipping
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: user-user
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster
+  name: user
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: wishlist-user
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster
+  name: wishlist

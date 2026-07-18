@@ -95,8 +95,8 @@ spec:
               value: kafka:9092
 
             - name: POSTGRES_DSN
-              value: "postgres://pricing:pricing@pricing-db:5432/pricing?sslmode=disable"  
-            
+              value: "postgres://pricing:pricing@postgres-cluster-rw:5432/pricing-db-v1?sslmode=disable"
+
             # JWT
             - name: JWT_PUBLIC_KEY_FILE
               valueFrom:

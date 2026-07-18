@@ -95,8 +95,8 @@ spec:
               value: kafka:9092
 
             - name: POSTGRES_DSN
-              value: "postgres://shipping:shipping@shipping-db:5432/shipping?sslmode=disable"  
-            
+              value: "postgres://shipping:shipping@postgres-cluster-rw:5432/shipping-db-v1?sslmode=disable"
+
             # JWT
             - name: JWT_PUBLIC_KEY_FILE
               valueFrom:

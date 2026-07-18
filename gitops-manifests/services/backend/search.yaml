@@ -92,8 +92,8 @@ spec:
               value: "embedded-market"
 
             - name: POSTGRES_DSN
-              value: "postgres://search:search@search-db:5432/search?sslmode=disable"  
-            
+              value: "postgres://search:search@postgres-cluster-rw:5432/search-db-v1?sslmode=disable"
+
             # JWT
             - name: JWT_PUBLIC_KEY_FILE
               valueFrom:

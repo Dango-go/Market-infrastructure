@@ -1,0 +1,44 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: application-monitor
+  namespace: application
+  labels:
+    # (часто це release: kube-prometheus-stack або prometheus: k8s).
+    release: prometheus-stack
+spec:
+
+  namespaceSelector:
+    matchNames:
+      - application  
+
+  selector:
+    matchLabels:
+      application: service
+
+  endpoints:
+
+    - port: tcp-prometheus
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s 
+ 
+      relabelings:
+        - separator: ;
+          regex: __meta_kubernetes_pod_name
+          replacement: $1
+          sourceLabels:
+            - __meta_kubernetes_pod_name
+          targetLabel: kubernetes_pod_name
+
+    - port: http 
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s
+      relabelings:
+        - separator: ;
+          regex: __meta_kubernetes_pod_name
+          replacement: $1
+          sourceLabels:
+            - __meta_kubernetes_pod_name
+          targetLabel: kubernetes_pod_name

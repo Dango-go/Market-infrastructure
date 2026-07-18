@@ -95,8 +95,8 @@ spec:
               value: "embedded-market"
 
             - name: POSTGRES_DSN
-              value: "postgres://notification:notification@notification-db:5432/notification?sslmode=disable"  
-            
+              value: "postgres://notification:notification@postgres-cluster-rw:5432/notification-db-v1?sslmode=disable"
+
             # JWT
             - name: JWT_PUBLIC_KEY_FILE
               valueFrom:

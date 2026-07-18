@@ -1,0 +1,32 @@
+watchAnyNamespace: true
+
+replicas: 2
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 1024Mi
+
+nodeSelector: {} # Ignoring filtration
+
+tolerations: []
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:  # Soft rule, act in deployment moment 
+      - weight: 100
+        podAffinityTerm:
+          labelSelector: # Rule
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - strimzi-cluster-operator
+          topologyKey: kubernetes.io/hostname
+
+featureGates: "+UseKRaft,+UnidirectionalTopicOperator"
+
+logLevel: INFO

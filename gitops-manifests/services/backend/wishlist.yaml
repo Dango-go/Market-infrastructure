@@ -95,8 +95,8 @@ spec:
               value: kafka:9092
 
             - name: POSTGRES_DSN
-              value: "postgres://wishlist:wishlist@wishlist-db:5432/wishlist?sslmode=disable"  
-            
+              value: "postgres://wishlist:wishlist@postgres-cluster-rw:5432/wishlist-db-v1?sslmode=disable"
+
             # JWT
             - name: JWT_PUBLIC_KEY_FILE
               valueFrom:

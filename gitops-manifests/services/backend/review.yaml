@@ -92,8 +92,8 @@ spec:
               value: "embedded-market"
 
             - name: POSTGRES_DSN
-              value: "postgres://review:review@review-db:5432/review?sslmode=disable"  
-            
+              value: "postgres://review:review@postgres-cluster-rw:5432/review-db-v1?sslmode=disable"
+
             # JWT
             - name: JWT_PUBLIC_KEY_FILE
               valueFrom:

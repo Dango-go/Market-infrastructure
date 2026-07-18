@@ -95,8 +95,8 @@ spec:
               value: "embedded-market"
 
             - name: POSTGRES_DSN
-              value: "postgres://inventory:inventory@inventory-db:5432/inventory?sslmode=disable"  
-            
+              value: "postgres://inventory:inventory@postgres-cluster-rw:5432/inventory-db-v1?sslmode=disable"
+
             # JWT
             - name: JWT_PUBLIC_KEY_FILE
               valueFrom:

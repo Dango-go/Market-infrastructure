@@ -1,0 +1,92 @@
+---
+apiVersion: kafka.strimzi.io/v1
+kind: Kafka
+metadata:
+  name: prod-cluster
+  namespace: kafka
+  annotations:
+    strimzi.io/node-pools: "enabled"
+    strimzi.io/kraft: "enabled"
+spec:
+  kafka:
+    version: 3.7.0
+    metadataVersion: 3.7-IV4
+    
+    authorization:
+      type: simple
+      superUsers:
+        - CN=admin # TLS main CN
+    
+    listeners:
+ 
+      - name: tls
+        port: 9093
+        type: internal
+        tls: true
+        authentication:
+          type: tls
+       
+      - name: scram
+        port: 9094
+        type: internal
+        tls: true
+        authentication:
+          type: scram-sha-512
+
+    config:
+      default.replication.factor: 3
+      min.insync.replicas: 2
+      auto.create.topics.enable: "false"
+
+  entityOperator:  # Proccess in entity-operator. Default settings
+    topicOperator: {}
+    userOperator: {}
+
+# Controllers
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaNodePool
+metadata:
+  name: controllers
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: prod-cluster
+spec:
+  replicas: 3
+  roles: [controller]
+  jvmOptions:
+  # JVM resources
+    -Xms: 1024m    
+    -Xmx: 1024m
+  storage:
+    type: jbod
+    volumes:
+      - id: 0  # /var/lib/kafka/data/kafka-log0
+        type: persistent-claim  # YAML manifest
+        size: 3Gi 
+        deleteClaim: false  # Pvc not delete
+        class: "premium-rwo"
+
+# Brockers
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaNodePool
+metadata:
+  name: brokers
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: prod-cluster
+spec:
+  replicas: 3
+  roles: [broker]
+  jvmOptions:
+    -Xms: 4096m
+    -Xmx: 4096m
+  storage:
+    type: jbod
+    volumes:
+      - id: 0
+        type: persistent-claim
+        size: 10Gi
+        deleteClaim: false
+        class: "premium-rwo"

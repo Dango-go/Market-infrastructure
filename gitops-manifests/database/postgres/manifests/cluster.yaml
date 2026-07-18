@@ -15,11 +15,11 @@ spec:
       cpu: "250m" # Milicores
       memory: "1.5Gi"
     limits:
-      cpu: "500m"
+      cpu: "400m"
       memory: "1.5Gi" 
 
   storage:
-    size: 30Gi  # Create pvc 
+    size: 30Gi  # Aoutcreate pvc 
  
     storageClass: premium-rwo
 
@@ -32,11 +32,11 @@ spec:
   postgresql:
     parameters:
  
-      shared_buffers: "1GB"        
-      work_mem: "16MB"
-      maintenance_work_mem: "256MB"
-      effective_cache_size: "3GB"  
-      max_connections: "300"
+      shared_buffers: "300MB"        
+      work_mem: "6MB"
+      maintenance_work_mem: "128MB"
+      effective_cache_size: "270MB"  
+      max_connections: "80"
       
  
       log_destination: "csvlog"
@@ -53,19 +53,23 @@ spec:
  
   bootstrap:
     initdb:
-      database: my_production_app  
-      owner: app_user           
+      database: default  
+      owner: default           
  
       secret:
-        name: my-app-db-credentials
+        name: default
  
+  serviceAccountName: postgres-backup-sa  # Local SA for leader and replicas pods with postgres
   backup:
  
     retentionPolicy: "30d"
     barmanObjectStore:
  
-      destinationPath: "s3://my-company-db-backups/prod-postgres-cluster/"
-      endpointURL: "https://s3.eu-central-1.amazonaws.com"
+      destinationPath: "s3://storage-dango-v1/postgres-cluster/"
+      endpointURL: "https://storage.googleapis.com"
+      #googleCredentials:
+        #gkeServiceAccount:
+          #name: pg-backup-sa
       s3Credentials:
         accessKeyId:
           name: aws-s3-creds
@@ -76,20 +80,4 @@ spec:
  
       wal:
         compression: gzip
-
----
-apiVersion: postgresql.cnpg.io/v1
-kind: Pooler
-metadata:
-  name: prod-postgres-pooler
-  namespace: database
-spec:
-  cluster:
-    name: prod-postgres-cluster
-  instances: 2
-  type: rw  
-  pgbouncer:
-    poolMode: transaction  
-    parameters:
-      max_client_conn: "1000"
-      default_pool_size: "50"
+        

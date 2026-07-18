@@ -1,0 +1,48 @@
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaUser
+metadata:
+  name: backend-user
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: prod-cluster
+spec:
+  authentication:
+    type: tls
+  
+  quotas:
+    producerByteRate: 10485760  
+    consumerByteRate: 20971520  
+    requestPercentage: 55 
+
+ 
+  authorization:
+    type: simple
+    acls:
+ 
+      - resource:
+          type: topic
+          name: orders
+          patternType: literal
+        operations:
+          - Read
+          - Write
+          - Describe
+        host: "*"
+      
+     
+      - resource:
+          type: topic
+          name: payments
+          patternType: literal
+        operations:
+          - Write
+          - Describe
+        host: "*"
+ 
+      - resource:
+          type: group
+          name: backend-consumer-group
+          patternType: literal
+        operations:
+          - Read
+        host: "*"

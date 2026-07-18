@@ -16,9 +16,10 @@ type RouterDeps struct {
 
 func NewRouter(d RouterDeps) *gin.Engine {
 	engine := gin.New()
-	engine.Use(middleware.RequestContext(), middleware.Logging(d.Logger), middleware.Recovery())
+	engine.Use(middleware.RequestContext(), middleware.HTTPMetrics("wishlist"), middleware.Logging(d.Logger), middleware.Recovery())
 	engine.GET("/healthz", d.System.Healthz)
 	engine.GET("/readyz", d.System.Readyz)
+	engine.GET("/metrics", middleware.PrometheusHandler("wishlist"))
 
 	v1 := engine.Group("/api/v1/wishlist")
 	v1.Use(middleware.Authentication(d.Verifier))

@@ -24,7 +24,6 @@ spec:
       operator: In
       values:
         - prometheus-stack
-        - prometheus-argo
   podMonitorSelector:
     matchLabels:
       release: prometheus-stack
@@ -47,15 +46,15 @@ spec:
     limits:
       memory: 8Gi
       cpu: "4"
-  storage:
-    volumeClaimTemplate:
-      spec:
-        storageClassName: gp3
-        accessModes:
-          - ReadWriteOnce
-        resources:
-          requests:
-            storage: 200Gi
+  storageSpec: 
+      volumeClaimTemplate:
+        spec:
+          storageClassName: premium-rwo
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 15Gi
   alerting:
     alertmanagers:
       - name: alertmanager-main

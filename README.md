@@ -628,3 +628,26 @@ gitops-manifests/
 Google Artifact Registry (ПОВНИЙ ШЛЯХ)
 europe-central2-docker.pkg.dev / [ПРОЄКТ] / [РЕПОЗИТОРІЙ] / [НАЗВА_ПАКЕТА] : [ТЕГ]
 image: europe-central2-docker.pkg.dev/PROJECT_ID/REPOSITORY/IMAGE_NAME:TAG
+
+
+
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: postgres-backup-sa
+  namespace: default
+  annotations:
+    iam.gke.io/gcp-service-account: pg-backup-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com
+
+Покроковий процес виконання 
+
+    Запит: Ваша програма (наприклад, скрипт бекапу PostgreSQL) всередині пода намагається звернутися до API Google Cloud.
+
+    Перехоплення: GKE на вузлі (node) автоматично підміняє стандартний шлях до облікових даних. Замість того, щоб шукати секрет, бібліотека клієнта GCP звертається до локального Metadata Server (спеціальний сервіс, який працює на кожному вузлі GKE).
+
+    Перевірка: Metadata Server бачить, що запит йде від пода, який використовує postgres-backup-sa. Він перевіряє анотацію в Kubernetes API.
+
+    Обмін (Token Exchange): Metadata Server бере токен від Kubernetes, звертається до IAM API Google, і каже: "Цей под підтвердив свою особу як KSA, видай мені короткочасний OIDC-токен для GSA pg-backup-sa".
+
+    Доступ: Програма отримує токен і виконує свою дію (наприклад, заливає бекап у бакет) від імені GSA.

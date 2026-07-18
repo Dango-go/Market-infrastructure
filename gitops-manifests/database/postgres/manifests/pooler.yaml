@@ -1,0 +1,16 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Pooler
+metadata:
+  name: prod-postgres-pooler
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster
+  instances: 3
+  type: rw
+  # pgbouncer pod   
+  pgbouncer:
+    poolMode: transaction  
+    parameters:
+      max_client_conn: "1000" 
+      default_pool_size: "50"  # Only 50 processes opened in postgres

@@ -35,7 +35,7 @@ type RouterDeps struct {
 func NewRouter(d RouterDeps) *gin.Engine {
 	engine := gin.New()
 	engine.Use(corsMiddleware())
-	engine.Use(middleware.RequestContext(), middleware.Logging(d.Logger), middleware.Recovery())
+	engine.Use(middleware.RequestContext(), middleware.HTTPMetrics("api-gateway"), middleware.Logging(d.Logger), middleware.Recovery())
 	engine.NoRoute(func(c *gin.Context) {
 		if c.Request.Method == http.MethodOptions {
 			c.Status(http.StatusNoContent)
@@ -45,6 +45,7 @@ func NewRouter(d RouterDeps) *gin.Engine {
 	})
 	engine.GET("/healthz", d.System.Healthz)
 	engine.GET("/readyz", d.System.Readyz)
+	engine.GET("/metrics", middleware.PrometheusHandler("api-gateway"))
 
 	authProxy := NewProxyHandler(d.Auth)
 	userProxy := NewProxyHandler(d.User)

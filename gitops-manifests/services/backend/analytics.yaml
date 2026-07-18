@@ -92,8 +92,8 @@ spec:
               value: "embedded-market"
 
             - name: POSTGRES_DSN
-              value: "postgres://analytics:analytics@analytics-db:5432/analytics?sslmode=disable"  
-            
+              value: "postgres://analytics:analytics@postgres-cluster-rw:5432/analytics-db-v1?sslmode=disable"
+
             # JWT
             - name: JWT_PUBLIC_KEY_FILE
               valueFrom:

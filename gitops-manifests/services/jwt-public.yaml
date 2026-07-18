@@ -1,3 +1,11 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: jwt-token  
+  namespace: application
+type: Opaque
+stringData:
+  public_key.pem: |
     -----BEGIN PUBLIC KEY-----
     MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAucCKgtt7DqQPehrWnOE0
     ePvZk5za/P47l5d2t8Pj74DArsIde/l0EqseooMlQLHhM9xMClRbBxPTbSD5ZCd2

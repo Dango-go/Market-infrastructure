@@ -95,8 +95,8 @@ spec:
               value: "embedded-market"
 
             - name: POSTGRES_DSN
-              value: "postgres://cart:cart@cart-db:5432/cart?sslmode=disable"
-            
+              value: "postgres://cart:cart@postgres-cluster-rw:5432/cart-db-v1?sslmode=disable"
+
             # JWT
             - name: JWT_PUBLIC_KEY_FILE
               valueFrom:

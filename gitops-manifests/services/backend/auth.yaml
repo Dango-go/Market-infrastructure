@@ -95,8 +95,8 @@ spec:
               value: "embedded-market"
 
             - name: POSTGRES_DSN
-              value: "postgres://auth:auth@auth-db:5432/auth?sslmode=disable"  
-            
+              value: "postgres://auth:auth@postgres-cluster-rw:5432/auth-db-v1?sslmode=disable"
+
             # JWT
             - name: JWT_PRIVATE_KEY_FILE
               valueFrom:

@@ -23,6 +23,7 @@ func NewRouter(d RouterDeps) *gin.Engine {
 	engine := gin.New()
 	engine.Use(
 		middleware.RequestContext(),
+		middleware.HTTPMetrics("auth"),
 		middleware.Logging(d.Logger),
 		middleware.Recovery(),
 	)
@@ -30,6 +31,7 @@ func NewRouter(d RouterDeps) *gin.Engine {
 	// Operational endpoints (unauthenticated, not rate limited).
 	engine.GET("/healthz", d.System.Healthz)
 	engine.GET("/readyz", d.System.Readyz)
+	engine.GET("/metrics", middleware.PrometheusHandler("auth"))
 	engine.GET("/.well-known/jwks.json", d.System.JWKS)
 
 	v1 := engine.Group("/api/v1/auth")

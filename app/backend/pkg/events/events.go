@@ -10,6 +10,7 @@ import (
 type Topic string
 
 const (
+	// aliases
 	TopicUserRegistered               Topic = "user.registered"
 	TopicUserProfileCreated           Topic = "user.profile.created"
 	TopicUserProfileUpdated           Topic = "user.profile.updated"
@@ -48,13 +49,13 @@ const (
 
 type Envelope struct {
 	ID            uuid.UUID       `json:"id"`
-	Type          Topic           `json:"type"`
+	Type          Topic           `json:"type"`  // order.created
 	Version       int             `json:"version"`
 	Source        string          `json:"source"`
 	Subject       string          `json:"subject"`
 	CorrelationID string          `json:"correlation_id"`
 	OccurredAt    time.Time       `json:"occurred_at"`
-	Data          json.RawMessage `json:"data"`
+	Data          json.RawMessage `json:"data"`   // json data
 }
 
 func NewEnvelope(id uuid.UUID, topic Topic, source, subject, correlationID string, occurredAt time.Time, payload any) (Envelope, error) {

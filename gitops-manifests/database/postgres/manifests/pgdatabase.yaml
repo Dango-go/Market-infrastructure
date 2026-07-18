@@ -1,0 +1,190 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: db-service-1 # Resource name
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster  # Cluster name
+  name: analytics-db-v1  # DB name
+  owner: analytics  # User name
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: db-service-2
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster
+  name: api-gateway-db-v1
+  owner: api-gateway
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: db-service-3
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster
+  name: auth-db-v1
+  owner: auth
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: db-service-4
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster
+  name: cart-db-v1
+  owner: cart
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: db-service-5
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster
+  name: catalog-db-v1
+  owner: catalog
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: db-service-6
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster
+  name: inventory-db-v1
+  owner: inventory
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: db-service-7
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster
+  name: notification-db-v1
+  owner: notification
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: db-service-8
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster
+  name: order-db-v1
+  owner: order
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: db-service-9
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster
+  name: payment-db-v1
+  owner: payment
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: db-service-10
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster
+  name: pricing-db-v1
+  owner: pricing
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: db-service-11
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster
+  name: recommendation-db-v1
+  owner: recommendation
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: db-service-12
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster
+  name: review-db-v1
+  owner: review
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: db-service-13
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster
+  name: search-db-v1
+  owner: search
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: db-service-14
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster
+  name: shipping-db-v1
+  owner: shipping
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: db-service-15
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster
+  name: user-db-v1
+  owner: user
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: db-service-16
+  namespace: storage
+spec:
+  cluster:
+    name: postgres-cluster
+  name: wishlist-db-v1
+  owner: wishlist

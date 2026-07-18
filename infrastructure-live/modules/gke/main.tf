@@ -27,7 +27,7 @@ module "gke" {
       name                        = "triple-pool" 
       machine_type                = "e2-medium"
       min_count                   = 1
-      max_count                   = 2
+      max_count                   = 4
       local_ssd_count             = 0
       spot                        = false
       disk_size_gb                = 20
