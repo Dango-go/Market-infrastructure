@@ -32,7 +32,7 @@ spec:
       containers:
       - name: search
         image: dango17/search-service:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - name: http
           containerPort: 8091

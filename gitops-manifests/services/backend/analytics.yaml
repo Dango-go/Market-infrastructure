@@ -32,7 +32,7 @@ spec:
       containers:
       - name: analytics
         image: dango17/analytics-service:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - name: http
           containerPort: 8094

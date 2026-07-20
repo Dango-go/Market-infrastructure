@@ -32,7 +32,7 @@ spec:
       containers:
       - name: notification
         image: dango17/notification-service:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - name: http
           containerPort: 8090

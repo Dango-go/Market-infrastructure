@@ -32,7 +32,7 @@ spec:
       containers:
       - name: recommendation
         image: dango17/recommendation-service:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - name: http
           containerPort: 8093

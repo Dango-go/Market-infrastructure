@@ -25,16 +25,12 @@ spec:
     spec:
       containers:
       - name: frontend-container
-        image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/frontend-service:latest
-        imagePullPolicy: IfNotPresent
+        image: dango17/frontend-service:latest
+        imagePullPolicy: Always
         ports:
-        - containerPort: 80
+        - containerPort: 8080
           name: http
-        env:
-        - name: NODE_ENV
-          value: production
-        - name: API_URL
-          value: https://api.yourdomain.com
+
         resources:
           requests:
             cpu: 50m

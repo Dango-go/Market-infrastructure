@@ -32,7 +32,7 @@ spec:
       containers:
       - name: payment
         image: dango17/payment-service:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - name: http
           containerPort: 8089

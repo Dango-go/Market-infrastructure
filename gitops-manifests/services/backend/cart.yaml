@@ -32,7 +32,7 @@ spec:
       containers:
       - name: cart
         image: dango17/cart-service:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - name: http
           containerPort: 80

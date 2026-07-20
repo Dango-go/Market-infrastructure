@@ -32,7 +32,7 @@ spec:
       containers:
       - name: catalog
         image: dango17/catalog-service:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - name: http
           containerPort: 8083

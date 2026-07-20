@@ -32,7 +32,7 @@ spec:
       containers:
       - name: review
         image: dango17/review-service:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - name: http
           containerPort: 8092

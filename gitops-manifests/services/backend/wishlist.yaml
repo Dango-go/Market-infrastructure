@@ -32,7 +32,7 @@ spec:
       containers:
       - name: wishlist
         image: dango17/wishlist-service:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - name: http
           containerPort: 8095

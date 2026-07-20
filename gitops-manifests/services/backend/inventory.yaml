@@ -32,7 +32,7 @@ spec:
       containers:
       - name: inventory
         image: dango17/inventory-service:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - name: http
           containerPort: 8084

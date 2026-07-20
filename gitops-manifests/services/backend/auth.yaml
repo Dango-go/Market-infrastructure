@@ -32,7 +32,7 @@ spec:
       containers:
       - name: auth
         image: dango17/auth-service:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - name: http
           containerPort: 8081

@@ -4,8 +4,7 @@ set -euo pipefail
 cd /home/bodya/Projects/embedded-market-infrastructure/gitops-manifests/services/backend 
 
 # kubectl create ns application
-kubectl apply -f /home/bodya/Projects/embedded-market-infrastructure/gitops-manifests/services/backend/secrets/jwt-pub.yaml
-kubectl apply -f /home/bodya/Projects/embedded-market-infrastructure/gitops-manifests/services/backend/secrets/jwt.yaml
+
 
 
 ROOT_DIR="$(pwd)"

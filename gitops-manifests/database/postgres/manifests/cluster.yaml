@@ -13,10 +13,10 @@ spec:
   resources:
     requests:
       cpu: "250m" # Milicores
-      memory: "700Mi"
+      memory: "450Mi"
     limits:
       cpu: "400m"
-      memory: "700Mi" 
+      memory: "450Mi" 
 
   storage:
     size: 30Gi  # Aoutcreate pvc 

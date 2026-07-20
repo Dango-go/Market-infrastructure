@@ -32,7 +32,7 @@ spec:
       containers:
       - name: pricing
         image: dango17/pricing-service:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - name: http
           containerPort: 8085
