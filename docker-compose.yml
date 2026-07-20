@@ -1,0 +1,484 @@
+name: embedded-market
+
+x-backend-common: &backend-common
+  restart: unless-stopped
+  environment: &backend-common-env
+    ENVIRONMENT: development
+    LOG_LEVEL: info
+    POSTGRES_MAX_CONNS: 10
+    POSTGRES_MIN_CONNS: 2
+    POSTGRES_MAX_CONN_LIFETIME: 1h
+    POSTGRES_CONNECT_TIMEOUT: 5s
+    JWT_PUBLIC_KEY_FILE: /app/secrets/jwt_public.pem
+    JWT_ISSUER: embedded-market-auth
+    JWT_AUDIENCE: embedded-market
+    REDIS_ADDR: redis:6379
+    REDIS_DB: 0
+    KAFKA_BROKERS: redpanda:9092
+    OUTBOX_POLL_INTERVAL: 2s
+    OUTBOX_BATCH_SIZE: 100
+  volumes:
+    - ./app/secrets:/app/secrets:ro
+  networks:
+    - embedded-market
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./app/infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - embedded-market
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - embedded-market
+
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v24.2.10
+    restart: unless-stopped
+    command:
+      - redpanda
+      - start
+      - --overprovisioned
+      - --smp
+      - "1"
+      - --memory
+      - 512M
+      - --reserve-memory
+      - 0M
+      - --node-id
+      - "0"
+      - --check=false
+      - --kafka-addr
+      - PLAINTEXT://0.0.0.0:9092
+      - --advertise-kafka-addr
+      - PLAINTEXT://redpanda:9092
+      - --pandaproxy-addr
+      - 0.0.0.0:8082
+      - --advertise-pandaproxy-addr
+      - redpanda:8082
+    ports:
+      - "9092:9092"
+      - "9644:9644"
+    volumes:
+      - redpanda_data:/var/lib/redpanda/data
+    networks:
+      - embedded-market
+
+  auth-service:
+    <<: *backend-common
+    build:
+      context: ./app/backend
+      dockerfile: ./Dockerfile.service
+      args:
+        SERVICE: auth
+    environment:
+      <<: *backend-common-env
+      SERVICE_NAME: auth-service
+      HTTP_PORT: 8081
+      POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/auth?sslmode=disable
+      JWT_PRIVATE_KEY_FILE: /app/secrets/jwt_private.pem
+      JWT_KEY_ID: auth-key-1
+      JWT_ACCESS_TTL: 15m
+      JWT_REFRESH_TTL: 720h
+      COOKIE_REFRESH_NAME: em_refresh_token
+      COOKIE_OAUTH_STATE_NAME: em_oauth_state
+      COOKIE_DOMAIN: localhost
+      COOKIE_SECURE: "false"
+      RATE_LIMIT_REQUESTS: 60
+      RATE_LIMIT_WINDOW: 1m
+      OAUTH_GITHUB_CLIENT_ID: ""
+      OAUTH_GITHUB_CLIENT_SECRET: ""
+      OAUTH_GITHUB_REDIRECT_URL: http://localhost:8081/api/v1/auth/oauth/github/callback
+      OAUTH_GOOGLE_CLIENT_ID: ""
+      OAUTH_GOOGLE_CLIENT_SECRET: ""
+      OAUTH_GOOGLE_REDIRECT_URL: http://localhost:8081/api/v1/auth/oauth/google/callback
+      OAUTH_GITLAB_CLIENT_ID: ""
+      OAUTH_GITLAB_CLIENT_SECRET: ""
+      OAUTH_GITLAB_REDIRECT_URL: http://localhost:8081/api/v1/auth/oauth/gitlab/callback
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      redpanda:
+        condition: service_started
+    ports:
+      - "8081:8081"
+
+  user-service:
+    <<: *backend-common
+    build:
+      context: ./app/backend
+      dockerfile: ./Dockerfile.service
+      args:
+        SERVICE: user
+    environment:
+      <<: *backend-common-env
+      SERVICE_NAME: user-service
+      HTTP_PORT: 8082
+      POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/user?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redpanda:
+        condition: service_started
+    ports:
+      - "8082:8082"
+
+  catalog-service:
+    <<: *backend-common
+    build:
+      context: ./app/backend
+      dockerfile: ./Dockerfile.service
+      args:
+        SERVICE: catalog
+    environment:
+      <<: *backend-common-env
+      SERVICE_NAME: catalog-service
+      HTTP_PORT: 8083
+      POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/catalog?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8083:8083"
+
+  inventory-service:
+    <<: *backend-common
+    build:
+      context: ./app/backend
+      dockerfile: ./Dockerfile.service
+      args:
+        SERVICE: inventory
+    environment:
+      <<: *backend-common-env
+      SERVICE_NAME: inventory-service
+      HTTP_PORT: 8084
+      POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/inventory?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8084:8084"
+
+  pricing-service:
+    <<: *backend-common
+    build:
+      context: ./app/backend
+      dockerfile: ./Dockerfile.service
+      args:
+        SERVICE: pricing
+    environment:
+      <<: *backend-common-env
+      SERVICE_NAME: pricing-service
+      HTTP_PORT: 8085
+      POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/pricing?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redpanda:
+        condition: service_started
+    ports:
+      - "8085:8085"
+
+  cart-service:
+    <<: *backend-common
+    build:
+      context: ./app/backend
+      dockerfile: ./Dockerfile.service
+      args:
+        SERVICE: cart
+    environment:
+      <<: *backend-common-env
+      SERVICE_NAME: cart-service
+      HTTP_PORT: 8086
+      POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/cart?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redpanda:
+        condition: service_started
+    ports:
+      - "8086:8086"
+
+  order-service:
+    <<: *backend-common
+    build:
+      context: ./app/backend
+      dockerfile: ./Dockerfile.service
+      args:
+        SERVICE: order
+    environment:
+      <<: *backend-common-env
+      SERVICE_NAME: order-service
+      HTTP_PORT: 8087
+      POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/order?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redpanda:
+        condition: service_started
+    ports:
+      - "8087:8087"
+
+  shipping-service:
+    <<: *backend-common
+    build:
+      context: ./app/backend
+      dockerfile: ./Dockerfile.service
+      args:
+        SERVICE: shipping
+    environment:
+      <<: *backend-common-env
+      SERVICE_NAME: shipping-service
+      HTTP_PORT: 8088
+      POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/shipping?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redpanda:
+        condition: service_started
+    ports:
+      - "8088:8088"
+
+  payment-service:
+    <<: *backend-common
+    build:
+      context: ./app/backend
+      dockerfile: ./Dockerfile.service
+      args:
+        SERVICE: payment
+    environment:
+      <<: *backend-common-env
+      SERVICE_NAME: payment-service
+      HTTP_PORT: 8089
+      POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/payment?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redpanda:
+        condition: service_started
+    ports:
+      - "8089:8089"
+
+  notification-service:
+    <<: *backend-common
+    build:
+      context: ./app/backend
+      dockerfile: ./Dockerfile.service
+      args:
+        SERVICE: notification
+    environment:
+      <<: *backend-common-env
+      SERVICE_NAME: notification-service
+      HTTP_PORT: 8090
+      POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/notification?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redpanda:
+        condition: service_started
+    ports:
+      - "8090:8090"
+
+  wishlist-service:
+    <<: *backend-common
+    build:
+      context: ./app/backend
+      dockerfile: ./Dockerfile.service
+      args:
+        SERVICE: wishlist
+    environment:
+      <<: *backend-common-env
+      SERVICE_NAME: wishlist-service
+      HTTP_PORT: 8095
+      POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/wishlist?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redpanda:
+        condition: service_started
+    ports:
+      - "8095:8095"
+
+  search-service:
+    <<: *backend-common
+    build:
+      context: ./app/backend
+      dockerfile: ./Dockerfile.service
+      args:
+        SERVICE: search
+    environment:
+      <<: *backend-common-env
+      SERVICE_NAME: search-service
+      HTTP_PORT: 8091
+      POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/search?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8091:8091"
+
+  review-service:
+    <<: *backend-common
+    build:
+      context: ./app/backend
+      dockerfile: ./Dockerfile.service
+      args:
+        SERVICE: review
+    environment:
+      <<: *backend-common-env
+      SERVICE_NAME: review-service
+      HTTP_PORT: 8092
+      POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/review?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8092:8092"
+
+  recommendation-service:
+    <<: *backend-common
+    build:
+      context: ./app/backend
+      dockerfile: ./Dockerfile.service
+      args:
+        SERVICE: recommendation
+    environment:
+      <<: *backend-common-env
+      SERVICE_NAME: recommendation-service
+      HTTP_PORT: 8093
+      POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/recommendation?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8093:8093"
+
+  analytics-service:
+    <<: *backend-common
+    build:
+      context: ./app/backend
+      dockerfile: ./Dockerfile.service
+      args:
+        SERVICE: analytics
+    environment:
+      <<: *backend-common-env
+      SERVICE_NAME: analytics-service
+      HTTP_PORT: 8094
+      POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/analytics?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8094:8094"
+
+  api-gateway:
+    <<: *backend-common
+    build:
+      context: ./app/backend
+      dockerfile: ./Dockerfile.service
+      args:
+        SERVICE: api-gateway
+    environment:
+      <<: *backend-common-env
+      SERVICE_NAME: api-gateway
+      HTTP_PORT: 8080
+      AUTH_SERVICE_URL: http://auth-service:8081
+      USER_SERVICE_URL: http://user-service:8082
+      CATALOG_SERVICE_URL: http://catalog-service:8083
+      INVENTORY_SERVICE_URL: http://inventory-service:8084
+      PRICING_SERVICE_URL: http://pricing-service:8085
+      CART_SERVICE_URL: http://cart-service:8086
+      ORDER_SERVICE_URL: http://order-service:8087
+      SHIPPING_SERVICE_URL: http://shipping-service:8088
+      PAYMENT_SERVICE_URL: http://payment-service:8089
+      NOTIFICATION_SERVICE_URL: http://notification-service:8090
+      WISHLIST_SERVICE_URL: http://wishlist-service:8095
+      SEARCH_SERVICE_URL: http://search-service:8091
+      REVIEW_SERVICE_URL: http://review-service:8092
+      RECOMMENDATION_SERVICE_URL: http://recommendation-service:8093
+      ANALYTICS_SERVICE_URL: http://analytics-service:8094
+    depends_on:
+      auth-service:
+        condition: service_started
+      user-service:
+        condition: service_started
+      catalog-service:
+        condition: service_started
+      inventory-service:
+        condition: service_started
+      pricing-service:
+        condition: service_started
+      cart-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+      shipping-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+      wishlist-service:
+        condition: service_started
+      search-service:
+        condition: service_started
+      review-service:
+        condition: service_started
+      recommendation-service:
+        condition: service_started
+      analytics-service:
+        condition: service_started
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: ./app/frontend
+      dockerfile: ./Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:8080
+    restart: unless-stopped
+    depends_on:
+      api-gateway:
+        condition: service_started
+    ports:
+      - "5173:8080"
+    networks:
+      - embedded-market
+
+volumes:
+  postgres_data:
+  redis_data:
+  redpanda_data:
+
+networks:
+  embedded-market:
+    driver: bridge

@@ -1,0 +1,16 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: default
+  namespace: argocd
+spec:
+  sourceRepo:
+    - 'git@github.com:Dango-go/Market-infrastructure.git'
+
+  clusterResourceWhitelist:
+  - group: ""
+    kind: Namespace  
+  
+  namespaceResourceWhitelist:
+  - group: "*"
+    kind: "*"  

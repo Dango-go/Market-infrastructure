@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS outbox;
+DROP TABLE IF EXISTS oauth_identities;
+DROP TABLE IF EXISTS sessions;
+DROP TABLE IF EXISTS accounts;
+DROP FUNCTION IF EXISTS set_updated_at();

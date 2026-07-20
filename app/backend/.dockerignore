@@ -1,0 +1,11 @@
+.git
+.github
+.agents
+.codex
+**/.env
+**/.env.*
+**/node_modules
+**/dist
+**/tmp
+**/.DS_Store
+secrets

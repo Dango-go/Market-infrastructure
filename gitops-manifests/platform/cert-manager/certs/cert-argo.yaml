@@ -1,0 +1,14 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: crt-secret
+  namespace: argocd  
+spec:
+  secretName: crt-secret-v3  
+  
+  issuerRef:
+    name: cluster-issuer  
+    kind: ClusterIssuer
+
+  dnsNames:
+    - argo.daanggo.com

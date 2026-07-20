@@ -1,0 +1,409 @@
+# PROMETHEUS
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: prometheus-main
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: kube-prometheus
+spec:
+  version: v2.51.0
+  replicas: 2
+  image: quay.io/prometheus/prometheus:v2.51.0
+  serviceAccountName: prometheus-k8s
+  paused: false
+  logLevel: info
+  logFormat: logfmt
+  retention: 15d
+  retentionSize: 150GB
+
+  serviceMonitorSelector:   
+    matchExpressions:
+    - key: release
+      operator: In
+      values:
+        - prometheus-stack
+        - prometheus-argo
+  podMonitorSelector:
+    matchLabels:
+      release: prometheus-stack
+  ruleSelector:
+    matchLabels:
+      role: alert-rules
+      release: prometheus-stack
+  probeSelector:
+    matchLabels:
+      release: prometheus-stack
+  listenLocal: false
+  enableAdminAPI: false
+  web:
+    pageTitle: "Production Prometheus"
+    tlsConfig: {}
+  resources:
+    requests:
+      memory: 4Gi
+      cpu: "2"
+    limits:
+      memory: 8Gi
+      cpu: "4"
+  storage:
+    volumeClaimTemplate:
+      spec:
+        storageClassName: gp3
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 200Gi
+  alerting:
+    alertmanagers:
+      - name: alertmanager-main
+        namespace: monitoring
+        port: web
+        apiVersion: v2
+        timeout: 10s
+  remoteWrite:
+    - url: "http://victoria-metrics.monitoring.svc.cluster.local:8428/api/v1/write"
+      remoteTimeout: 30s
+  queueConfig:
+    capacity: 10000
+    maxShards: 200
+    minShards: 1
+    maxSamplesPerSend: 500
+    batchSendDeadline: 5s
+  writeRelabelConfigs:
+    - sourceLabels: [__name__]
+      regex: "(kubelet_volume_stats_used_bytes|node_cpu_seconds_total)"
+      action: keep
+  thanos:
+    version: v0.34.0
+    objectStorageConfig:
+      key: thanos.yaml
+      name: thanos-objstore-secret
+  securityContext:
+    fsGroup: 2000
+    runAsNonRoot: true
+    runAsUser: 1000
+  nodeSelector:
+    kubernetes.io/os: linux
+    node-role.kubernetes.io/infra: "true"
+  tolerations:
+    - key: "infra"
+      operator: "Exists"
+      effect: "NoSchedule"
+  enableFeatures:
+    - remote-write-receiver
+    - memory-snapshot-on-shutdown
+  secrets:
+    - etcd-certs
+
+
+# ALERT MANAGER
+alertmanager:
+  enabled: true
+  apiVersion: v2 
+  
+  serviceAccount:
+    create: true
+    name: alertmanager
+    annotations: {}
+    automountServiceAccountToken: true
+
+  service:
+    enabled: true
+    type: ClusterIP
+    port: 9093
+    targetPort: 9093
+    annotations: {}
+    labels: {}
+    clusterIP: ""  # any free
+    loadBalancerIP: ""
+    externalTrafficPolicy: Cluster
+    sessionAffinity: None
+    sessionAffinityConfig:
+      clientIP: 
+        timeoutSeconds: 5400
+    additionalPorts: []
+
+  ingress:
+    enabled: false
+    ingressClassName: nginx
+    annotations: {}
+    labels: {}
+    hosts:
+      - grafana.daanggo.com
+    paths:
+      - /metrics
+    pathType: Prefix
+    tls: []
+
+    inhibit_rules:
+
+    config:
+    global:
+      resolve_timeout: 5m
+      smtp_smarthost: "smtp.gmail.com:587"
+      smtp_from: "alerts@example.com"
+      smtp_auth_username: "alerts@example.com"
+      smtp_auth_password: "CHANGE_ME"
+      smtp_require_tls: true
+
+      receiver: "default"
+      
+      group_by:  
+        - alertname
+        - namespace
+        - pod
+      group_wait: 30s  
+      group_interval: 5m  
+      repeat_interval: 4h    
+      
+ 
+      routes:
+        - matchers:   
+            - 'severity = "critical"'
+          receiver: "critical-email"    
+          group_wait: 10s
+          repeat_interval: 1h
+        - matchers:
+            - 'severity = "warning"'
+          receiver: "warning-email"
+          repeat_interval: 6h
+        - matchers:
+            - 'alertname = "Watchdog"'
+          receiver: "null"
+
+    receivers:
+      - name: "null" 
+      - name: "default"
+        email_configs:
+          - to: "devops@example.com"  
+            send_resolved: true  
+      - name: "critical-email"
+        email_configs:
+          - to: "bogdan.holovchenko.w@gmail.com"
+            send_resolved: true
+            headers:
+              Subject: '[CRITICAL] {{ .CommonLabels.alertname }}'
+      - name: "warning-email"
+        email_configs:
+          - to: "bogdan.holovchenko.w@gmail.com"
+            send_resolved: true
+            headers:
+              Subject: '[WARNING] {{ .CommonLabels.alertname }}'
+
+
+# NODE EXPORTER
+nodeExporter:
+  enabled: true
+prometheus-node-exporter:
+  releaseLabel: true
+  prometheus:
+    monitor:
+      enabled: true
+      additionalLabels:
+        release: kube-prometheus-stack  # Label on service monitor for exporter
+      interval: 30s
+      scrapeTimeout: 10s
+      attachMetadata:
+        node: true
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+  serviceAccount:
+    create: true
+    automountServiceAccountToken: false
+
+  rbac:
+    create: true
+
+  securityContext:
+    fsGroup: 65534
+    runAsGroup: 65534
+    runAsNonRoot: true
+    runAsUser: 65534
+
+  containerSecurityContext:
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+
+  hostNetwork: true
+  hostPID: true
+  hostIPC: false  
+  hostRootFsMount:
+    enabled: true
+    mountPropagation: HostToContainer
+  nodeSelector:
+    kubernetes.io/os: linux
+  tolerations:
+    - operator: Exists
+      effect: NoSchedule
+    - operator: Exists
+      effect: NoExecute
+  extraArgs:
+    #- --path.rootfs=/host/root
+    #- --path.procfs=/host/proc
+    #- --path.sysfs=/host/sys
+    #- --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|var/lib/kubelet/.+)(|/)
+    #- --collector.filesystem.fs-types-exclude=^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)
+
+# STATE METRICS
+kubeStateMetrics:
+  enabled: true
+
+kube-state-metrics:
+  releaseLabel: true
+  prometheusScrape: false
+
+  serviceAccount:
+    create: true
+
+  rbac:
+    create: true
+    useClusterRole: true
+
+# a monitor configured to search ksm
+  prometheus:
+    monitor:
+      enabled: true
+      additionalLabels:
+        release: kube-prometheus-stack
+      http:
+        interval: 30s
+        scrapeTimeout: 10s
+        honorLabels: true
+
+# For prom pod
+  selfMonitor:
+    enabled: true
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 512Mi
+
+  securityContext:
+    enabled: true
+    runAsNonRoot: true
+    runAsUser: 65534
+    runAsGroup: 65534
+    fsGroup: 65534
+
+  containerSecurityContext:
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+
+  collectors:
+    - pods
+    - nodes
+    - deployments
+    - statefulsets
+    - daemonsets
+    - services
+    - persistentvolumeclaims
+    - persistentvolumes
+    - jobs
+    - cronjobs
+    - namespaces
+    - horizontalpodautoscalers
+    - ingresses
+    - storageclasses
+    - resourcequotas
+    - poddisruptionbudgets
+
+  metricLabelsAllowlist:
+    - pods=[app.kubernetes.io/name,app.kubernetes.io/instance,app.kubernetes.io/component]
+    - deployments=[app.kubernetes.io/name,app.kubernetes.io/instance]
+    - statefulsets=[app.kubernetes.io/name,app.kubernetes.io/instance]
+    - services=[app.kubernetes.io/name,app.kubernetes.io/instance]
+    - nodes=[kubernetes.io/hostname,node.kubernetes.io/instance-type,topology.kubernetes.io/zone]
+
+  
+
+# GRAFANA
+grafana:
+  enabled: true
+  adminPassword: "######"
+
+  
+  # Ingress yaml for grafana. 
+  ingress:
+    enabled: true
+    name: grafana
+    namespace: monitoring
+    ingressClassName: nginx
+    service:
+      name: prometheus-stack-grafana
+      port: 80
+
+    hosts:
+      - grafana.daanggo.com
+    paths:
+      - /
+    pathType: Prefix
+    annotations:
+      cert-manager.io/cluster-issuer: "cluster-issuer"
+
+    tls:
+      - secretName: crt-secret-v2
+        hosts:
+          - grafana.daanggo.com
+
+ 
+  persistence:
+    enabled: true
+    name: grafana-volume
+    type: pvc
+   
+    size: 5Gi
+    accessModes:
+      - ReadWriteOnce 
+
+ 
+  plugins:
+    - grafana-piechart-panel
+    - vonage-status-panel
+
+
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+ 
+      searchNamespace: ALL
+
+ 
+    datasources:
+      enabled: true
+      label: grafana_datasource
+      labelValue: "1"
+      searchNamespace: ALL
+
+  grafana.ini:
+    server:
+      root_url: https://grafana.daanggo.com
+ 
+    auth.anonymous:
+      enabled: false  
+      org_role: Viewer
+ 
+    users:
+      default_theme: dark
+

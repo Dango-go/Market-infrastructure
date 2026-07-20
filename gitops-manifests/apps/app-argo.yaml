@@ -1,0 +1,14 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argo
+  namespace: app
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:Dango-go/Market-infrastructure.git 
+    targetRevision: HEAD  
+    path: gitops-manifests/bootstrap/
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: src 

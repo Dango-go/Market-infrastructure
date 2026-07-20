@@ -1,0 +1,25 @@
+# sqlc configuration for the auth service. `sqlc generate` reads the migrations as the
+# schema and the queries directory as the operations, emitting a typed pgx/v5 query layer
+# into internal/repository/postgres/gen. The hand-written repositories in
+# internal/repository/postgres execute the same SQL declared here and can be migrated onto
+# the generated Querier without changing the application layer.
+version: "2"
+sql:
+  - engine: "postgresql"
+    schema: "migrations"
+    queries: "queries"
+    gen:
+      go:
+        package: "authdb"
+        out: "../internal/repository/postgres/gen"
+        sql_package: "pgx/v5"
+        emit_interface: true
+        emit_json_tags: false
+        emit_pointers_for_null_types: true
+        overrides:
+          - db_type: "uuid"
+            go_type:
+              import: "github.com/google/uuid"
+              type: "UUID"
+          - db_type: "timestamptz"
+            go_type: "time.Time"

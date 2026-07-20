@@ -1,0 +1,235 @@
+apiVersion: apps/v1
+ 
+kind: Deployment
+metadata:
+  name: analytics
+  namespace: application
+  labels:
+    application: service
+  annotations:
+    env: dev
+spec:
+  replicas: 3  
+
+  selector:
+    matchLabels:
+      app: analytics
+      tier: backend
+
+  strategy:
+    type: RollingUpdate 
+    rollingUpdate:
+  
+       
+      maxUnavailable: 25%  # Min 75% work
+      maxSurge: 25%  # Min create at the one update
+
+ 
+  template:
+    metadata:
+      labels:
+ 
+        app: analytics
+        tier: backend
+
+    spec:
+      #imagePullSecrets:
+        #- name: gitlab-registry-secret
+
+ 
+      terminationGracePeriodSeconds: 40
+
+   
+      securityContext:
+        runAsNonRoot: true  
+        runAsUser: 1000     
+        fsGroup: 2000       
+
+ 
+      #initContainers:
+        #- name: wait-for-database
+          #image: busybox:1.36
+ 
+          #command: ['sh', '-c', 'until nc -z db-service.default.svc.cluster.local 5432; do echo "waiting for db"; sleep 2; done;']
+
+        #- name: run-database-migrations
+          #image: my-registry/payment-service-migrations:v1.2.0
+ 
+          #envFrom:
+            #- secretRef:
+                #name: db-credentials
+
+ 
+      containers:
+        - name: analytics
+          image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/analytics-service:latest
+          imagePullPolicy: IfNotPresent  
+
+          # docs which port listen
+          ports:
+            - name: http
+              containerPort: 8094
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+ 
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 700m
+              memory: 1Gi
+
+          env:
+            - name: SERVICE_NAME
+              value: analytics-service
+
+            - name: JWT_ISSUER
+              value: "embedded-market-auth"
+ 
+            - name: JWT_AUDIENCE
+              value: "embedded-market"
+
+            - name: POSTGRES_DSN
+              value: "postgres://analytics:analytics@analytics-db:5432/analytics?sslmode=disable"  
+            
+            # JWT
+            - name: JWT_PUBLIC_KEY_FILE
+              valueFrom:
+                secretKeyRef:
+                  name: jwt-token
+                  key: public_key.pem
+            
+            - name: HTTP_PORT
+              value: "8094"
+            
+            - name: LOG_LEVEL
+              value: "debug"
+
+            - name: ENVIRONMENT
+              value: development
+
+ 
+ 
+          securityContext:
+            allowPrivilegeEscalation: false  
+            readOnlyRootFilesystem: true    
+            capabilities:
+              drop: ["ALL"]                  
+
+ 
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 8094
+            failureThreshold: 30
+            periodSeconds: 10
+
+ 
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8094
+            initialDelaySeconds: 5  
+            periodSeconds: 10       
+            timeoutSeconds: 3       
+            failureThreshold: 2     
+ 
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8094
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1  
+
+   
+          lifecycle:
+            preStop:
+ 
+              exec:
+                command: ["sh", "-c", "sleep 10"]
+
+ 
+      nodeSelector:
+        type: development
+
+      affinity:
+ 
+        nodeAffinity:
+ 
+          preferredDuringSchedulingIgnoredDuringExecution:  # soft
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: topology.kubernetes.io/zone
+                    operator: In
+                    values:
+                      - "europe-central2"
+ 
+        podAffinity:
+ 
+          preferredDuringSchedulingIgnoredDuringExecution:  
+            - weight: 75
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: kubernetes.io/db
+                      operator: In
+                      values: 
+                        - analytics
+                       
+                topologyKey: kubernetes.io/hostname   # Group by this label
+ 
+        podAntiAffinity:
+ 
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: env
+                    operator: In
+                    values:
+                      - production
+              topologyKey: kubernetes.io/hostname
+ 
+      topologySpreadConstraints:
+        - maxSkew: 1    
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule  # ScheduleAnyway alternative
+          labelSelector:
+            matchLabels:
+              app: analytics
+
+ 
+      tolerations:
+        - key: "type"
+          operator: "Equal"
+          value: "development"
+          effect: "NoSchedule"
+ 
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: analytics-service
+  namespace: application
+  labels:
+    application: service
+    app: analytics
+    tier: backend
+spec:
+  type: ClusterIP
+  selector:
+    app: analytics
+    tier: backend
+  ports:
+    - name: http
+      port: 8094
+      targetPort: 8094
+      protocol: TCP
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+      protocol: TCP

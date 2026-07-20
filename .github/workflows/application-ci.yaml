@@ -1,0 +1,145 @@
+name: CI/CD Pipeline for Microservices
+
+on:
+  push:
+    branches: [ "dev" ]
+    paths:
+      - 'app/**'
+      - '.github/workflows/application-ci.yaml'
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    env:
+      DOCKERHUB_NAME: ${{ secrets.DOCKERHUB_USERNAME }}
+
+    permissions:
+      contents: 'read'  # Allow read access to the repository (for ID token)
+      id-token: 'write' # Allow get and send ID tokens for authentication with GCP
+    
+    strategy:
+      matrix:
+        service: [analytics, api-gateway, auth, cart, catalog, inventory, notification, order, payment, pricing, recommendation, review, search, shipping, user, wishlist, frontend]
+        include:
+          - service: analytics 
+            directory: app/backend/services/analytics
+            image_name: analytics-service
+          - service: api-gateway
+            directory: app/backend/services/api-gateway
+            image_name: api-gateway-service
+          - service: auth
+            directory: app/backend/services/auth
+            image_name: auth-service
+          - service: cart
+            directory: app/backend/services/cart
+            image_name: cart-service
+          - service: catalog
+            directory: app/backend/services/catalog
+            image_name: catalog-service
+          - service: inventory
+            directory: app/backend/services/inventory
+            image_name: inventory-service
+          - service: notification
+            directory: app/backend/services/notification
+            image_name: notification-service
+          - service: order
+            directory: app/backend/services/order
+            image_name: order-service
+          - service: payment
+            directory: app/backend/services/payment
+            image_name: payment-service
+          - service: pricing
+            directory: app/backend/services/pricing
+            image_name: pricing-service
+          - service: recommendation
+            directory: app/backend/services/recommendation
+            image_name: recommendation-service
+          - service: review
+            directory: app/backend/services/review
+            image_name: review-service
+          - service: search
+            directory: app/backend/services/search
+            image_name: search-service
+          - service: shipping
+            directory: app/backend/services/shipping
+            image_name: shipping-service
+          - service: user
+            directory: app/backend/services/user
+            image_name: user-service
+          - service: wishlist
+            directory: app/backend/services/wishlist
+            image_name: wishlist-service
+          - service: frontend
+            directory: app/frontend
+            image_name: frontend-service
+
+    # git clone, fetch
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+      
+    - name: Changed
+      id: changed
+      uses: tj-actions/changed-files@v45
+
+
+
+    - name: Set up Docker Buildx
+      if: contains(steps.changed.outputs.all_changed_files, matrix.directory) 
+      uses: docker/setup-buildx-action@v3
+
+
+      # Log in to GCP for get access token to authenticate with GAR and push Docker images in
+    - name: Log in to GCP
+      if: contains(steps.changed.outputs.all_changed_files, matrix.directory)
+      id: auth
+      uses: google-github-actions/auth@v2 
+      with:
+        workload_identity_provider: ${{ secrets.WORKLOAD_PROVIDER }}  # Address of the Workload Identity Provider. Go with token from GitHub Api.
+        service_account: ${{ secrets.SERVICE_ACCOUNT }}
+        token_format: 'access_token'  # Here in this variable we will get the access token to authenticate with GAR
+
+
+      # Write the access token to a config for docker client to authenticate with GAR
+    - name: Login to GAR
+      if: contains(steps.changed.outputs.all_changed_files, matrix.directory) 
+      uses: docker/login-action@v3
+      with:
+        registry: europe-central2-docker.pkg.dev
+        username: oauth2accesstoken
+        password: ${{ steps.auth.outputs.access_token }}
+
+
+    - name: Push to Registry (backend)
+      if: matrix.service != 'frontend' && contains(steps.changed.outputs.all_changed_files, matrix.directory)
+      uses: docker/build-push-action@v6
+      with:
+        context: ./app/backend
+        file: ${{ matrix.directory }}/Dockerfile
+        push: true
+        tags: |
+          europe-central2-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_REPOSITORY }}/${{ matrix.image_name }}:latest
+      
+
+    - name: Push to Registry (frontend)
+      if: matrix.service == 'frontend' && contains(steps.changed.outputs.all_changed_files, matrix.directory)
+      uses: docker/build-push-action@v6
+      with:
+        context: ./app/frontend
+        file: ${{ matrix.directory }}/Dockerfile
+        push: true
+        tags: |
+          europe-central2-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_REPOSITORY }}/${{ matrix.image_name }}:latest
+
+    - name: Trivy
+      if: contains(steps.changed.outputs.all_changed_files, matrix.directory)
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: europe-central2-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_REPOSITORY }}/${{ matrix.image_name }}:latest
+        image-src: local   # Search images only on local docker daemon
+        format: 'table'
+        exit-code: '0'
+        ignore-unfixed: true
+        severity: 'CRITICAL' 

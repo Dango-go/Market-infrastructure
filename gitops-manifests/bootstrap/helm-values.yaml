@@ -1,0 +1,133 @@
+global:
+  environment: prod
+  domain: example.com
+  labels:
+    managed-by: argo-label
+
+image:
+  repository: quay.io/argoproj/argocd
+  pullPolicy: IfNotPresent
+  tag: v2.x.x
+
+redis-ha:
+  enabled:  
+
+redis:
+  enabled: false
+
+
+ingress:
+  enabled: true
+
+  ingressClassName: "nginx"
+  annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-argo"
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+      nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+      nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "600"   
+
+ 
+# argocd-server
+server:
+  replicas: 2
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+  
+  # ingress settings
+  ingress:
+    enabled: false
+    ingressClassName: "nginx"
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    hosts:
+      - argo.daanggo.com
+    tls:
+      - secretName: "crt-secret-v3"
+        hosts:
+          - argo.daanggo.com
+
+# Create Service Monitor
+  metrics:
+    enabled: true  # open 9102 or /metrics 
+    serviceMonitor: 
+      enabled: true
+      additionalLabels:
+        release: "prometheus-argo"
+       
+# argocd-repo-server
+repoServer:
+  replicas: 2
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "1000m"
+      memory: "2Gi"
+
+  metrics:
+    enabled: true
+    serviceMonitor: 
+      enabled: true
+      additionalLabels:
+        release: "prometheus-argo"
+
+# ApplicationSet
+applicationSet:
+  replicas: 2
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+configs:
+  params:
+    server.insecure: false # port 8081 with security traffic. Argocd-server get all traffic with tls-certs from secret
+    server.disable.auth: false
+  cm: 
+    url: "https://argocd.dango9.uk"
+    admin.enabled: "true"
+  #  exec.enabled: "false"
+  #    If exec.enabled: "false"
+  #  dex.config:
+  #      connectors:
+  #        - type: github
+  #          id: github
+  #          name: GitHub
+  #          config:
+  #            clientID: "Ov23lixYw4g5CKDjPnG1"
+  #            clientSecretEnv: $github-client-secret:clientsecret # $secret_name:key_name. clientSecretEnv (key to set that variable from secret)
+  #            orgs: 
+  #              - name: dango-organization
+  #                teams:
+  #                  - devops
+
+  rbac:
+    policy.default: "role:readonly"
+    policy.csv: |
+      p, role:devops, applications, *, */*, allow
+      p, role:devops, clusters, get, *, allow
+      p, role:devops, repositories, *, *, allow
+      p, role:devops, logs, get, *, allow
+      p, role:devops, exec, create, */*, allow
+      g, dango-organization:devops, role:devops
+
+# p - policy (roles and their permissions)
+# <role>, <object>, <action>, <object name>, <effect>.
+# g - group. If user belong to this group he get this role role:devops for ex
+# devops-team@your-domain.com - real group from github
+
+
+
+
+  
+
