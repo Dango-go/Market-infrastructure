@@ -1,0 +1,5 @@
+Render locally:
+  helm template embedded-market-services {{ .Chart.Name }} -n {{ .Values.namespace }}
+
+Install or upgrade:
+  helm upgrade --install embedded-market-services {{ .Chart.Name }} -n {{ .Values.namespace }} --create-namespace

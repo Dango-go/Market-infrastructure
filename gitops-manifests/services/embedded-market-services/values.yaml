@@ -1,0 +1,1288 @@
+namespace: application
+deploymentDefaults:
+  replicas: 1
+  imagePullPolicy: IfNotPresent
+  imagePullSecrets: []
+  terminationGracePeriodSeconds: 40
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 2000
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+      - ALL
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 50m
+      memory: 64Mi
+  probes:
+    startup:
+      enabled: true
+      failureThreshold: 30
+      periodSeconds: 10
+    liveness:
+      enabled: true
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 2
+    readiness:
+      enabled: true
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      successThreshold: 1
+  lifecycle:
+    preStop:
+      exec:
+        command:
+        - sh
+        - -c
+        - sleep 10
+  nodeSelector:
+    type: development
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: env
+            operator: In
+            values:
+            - production
+        topologyKey: kubernetes.io/hostname
+  tolerations:
+  - key: type
+    operator: Equal
+    value: development
+    effect: NoSchedule
+services:
+  analytics:
+    enabled: true
+    name: analytics
+    tier: backend
+    replicas: 1
+    image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/analytics-service:latest
+    imagePullPolicy: IfNotPresent
+    ports:
+    - name: http
+      containerPort: 8094
+      protocol: TCP
+    - name: metrics
+      containerPort: 9090
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi
+    env:
+    - name: SERVICE_NAME
+      value: analytics-service
+    - name: JWT_ISSUER
+      value: embedded-market-auth
+    - name: JWT_AUDIENCE
+      value: embedded-market
+    - name: POSTGRES_DSN
+      value: postgres://analytics:analytics@postgres-cluster-rw.storage.svc.cluster.local:5432/analytics-db-v1?sslmode=disable
+    - name: JWT_PUBLIC_KEY_FILE
+      value: /etc/secrets/jwt/public_key.pem
+    - name: HTTP_PORT
+      value: '8094'
+    - name: LOG_LEVEL
+      value: debug
+    - name: ENVIRONMENT
+      value: development
+    health:
+      port: 8094
+      path: /healthz
+      readinessPath: /readyz
+    service:
+      enabled: true
+      name: analytics-service
+      type: ClusterIP
+      ports:
+      - name: http
+        port: 8094
+        targetPort: 8094
+        protocol: TCP
+      - name: metrics
+        port: 9090
+        targetPort: 9090
+        protocol: TCP
+    annotations:
+      env: dev
+    imagePullSecrets:
+    - name: artifact-registry-secret
+    volumeMounts:
+    - name: jwt-key-volume
+      mountPath: /etc/secrets/jwt/
+      readOnly: true
+    volumes:
+    - name: jwt-key-volume
+      secret:
+        secretName: jwt-token
+  api-gateway:
+    enabled: true
+    name: api-gateway
+    tier: backend
+    replicas: 1
+    image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/api-gateway-service:latest
+    imagePullPolicy: IfNotPresent
+    ports:
+    - name: http
+      containerPort: 8080
+      protocol: TCP
+    - name: metrics
+      containerPort: 9090
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi
+    envFrom:
+    - configMapRef:
+        name: services-urls
+    env:
+    - name: SERVICE_NAME
+      value: api-gateway-service
+    - name: JWT_ISSUER
+      value: embedded-market-auth
+    - name: JWT_AUDIENCE
+      value: embedded-market
+    - name: JWT_PUBLIC_KEY_FILE
+      valueFrom:
+        secretKeyRef:
+          name: jwt-token
+          key: public_key.pem
+    - name: HTTP_PORT
+      value: '8080'
+    - name: LOG_LEVEL
+      value: info
+    - name: ENVIRONMENT
+      value: development
+    health:
+      port: 8080
+      path: /healthz
+      readinessPath: /readyz
+    service:
+      enabled: true
+      name: api-gateway-service
+      type: ClusterIP
+      ports:
+      - name: http
+        port: 8080
+        targetPort: 8080
+        protocol: TCP
+      - name: metrics
+        port: 9090
+        targetPort: 9090
+        protocol: TCP
+    annotations:
+      env: dev
+  auth:
+    enabled: true
+    name: auth
+    tier: backend
+    replicas: 1
+    image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/auth-service:latest
+    imagePullPolicy: IfNotPresent
+    ports:
+    - name: http
+      containerPort: 8081
+      protocol: TCP
+    - name: metrics
+      containerPort: 9090
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi
+    env:
+    - name: SERVICE_NAME
+      value: analytics-service
+    - name: JWT_ISSUER
+      value: embedded-market-auth
+    - name: KAFKA_BROKERS
+      value: kafka:9092
+    - name: JWT_AUDIENCE
+      value: embedded-market
+    - name: POSTGRES_DSN
+      value: postgres://auth:auth@postgres-cluster-rw.storage.svc.cluster.local:5432/auth-db-v1?sslmode=disable
+    - name: JWT_PRIVATE_KEY_FILE
+      valueFrom:
+        secretKeyRef:
+          name: jwt-token-private
+          key: public_key.pem
+    - name: HTTP_PORT
+      value: '8081'
+    - name: LOG_LEVEL
+      value: debug
+    - name: ENVIRONMENT
+      value: development
+    health:
+      port: 8081
+      path: /healthz
+      readinessPath: /readyz
+    service:
+      enabled: true
+      name: auth-service
+      type: ClusterIP
+      ports:
+      - name: http
+        port: 8081
+        targetPort: 8081
+        protocol: TCP
+      - name: metrics
+        port: 9090
+        targetPort: 9090
+        protocol: TCP
+    annotations:
+      env: dev
+  cart:
+    enabled: true
+    name: cart
+    tier: backend
+    replicas: 1
+    image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/auth-service:latest
+    imagePullPolicy: IfNotPresent
+    ports:
+    - name: http
+      containerPort: 80
+      protocol: TCP
+    - name: metrics
+      containerPort: 9090
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi
+    env:
+    - name: SERVICE_NAME
+      value: cart-service
+    - name: JWT_ISSUER
+      value: embedded-market-auth
+    - name: KAFKA_BROKERS
+      value: kafka:9092
+    - name: JWT_AUDIENCE
+      value: embedded-market
+    - name: POSTGRES_DSN
+      value: postgres://cart:cart@postgres-cluster-rw.storage.svc.cluster.local:5432/cart-db-v1?sslmode=disable
+    - name: JWT_PUBLIC_KEY_FILE
+      value: /etc/secrets/jwt/public_key.pem
+    - name: HTTP_PORT
+      value: '8086'
+    - name: LOG_LEVEL
+      value: info
+    - name: ENVIRONMENT
+      value: development
+    health:
+      port: 8086
+      path: /healthz
+      readinessPath: /readyz
+    service:
+      enabled: true
+      name: cart-service
+      type: ClusterIP
+      ports:
+      - name: http
+        port: 8086
+        targetPort: 8086
+        protocol: TCP
+      - name: metrics
+        port: 9090
+        targetPort: 9090
+        protocol: TCP
+    annotations:
+      env: dev
+    imagePullSecrets:
+    - name: artifact-registry-secret
+    volumeMounts:
+    - name: jwt-key-volume
+      mountPath: /etc/secrets/jwt/
+      readOnly: true
+    volumes:
+    - name: jwt-key-volume
+      secret:
+        secretName: jwt-token
+  catalog:
+    enabled: true
+    name: catalog
+    tier: backend
+    replicas: 1
+    image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/catalog-service:latest
+    imagePullPolicy: IfNotPresent
+    ports:
+    - name: http
+      containerPort: 8083
+      protocol: TCP
+    - name: metrics
+      containerPort: 9090
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi
+    env:
+    - name: SERVICE_NAME
+      value: catalog-service
+    - name: JWT_ISSUER
+      value: embedded-market-auth
+    - name: KAFKA_BROKERS
+      value: kafka:9092
+    - name: JWT_AUDIENCE
+      value: embedded-market
+    - name: POSTGRES_DSN
+      value: postgres://catalog:catalog@postgres-cluster-rw.storage.svc.cluster.local:5432/catalog-db-v1?sslmode=disable
+    - name: JWT_PUBLIC_KEY_FILE
+      value: /etc/secrets/jwt/public_key.pem
+    - name: HTTP_PORT
+      value: '8083'
+    - name: LOG_LEVEL
+      value: info
+    - name: ENVIRONMENT
+      value: development
+    health:
+      port: 8083
+      path: /healthz
+      readinessPath: /readyz
+    service:
+      enabled: true
+      name: catalog-service
+      type: ClusterIP
+      ports:
+      - name: http
+        port: 8083
+        targetPort: 8083
+        protocol: TCP
+      - name: metrics
+        port: 9090
+        targetPort: 9090
+        protocol: TCP
+    annotations:
+      env: dev
+    imagePullSecrets:
+    - name: artifact-registry-secret
+    volumeMounts:
+    - name: jwt-key-volume
+      mountPath: /etc/secrets/jwt/
+      readOnly: true
+    volumes:
+    - name: jwt-key-volume
+      secret:
+        secretName: jwt-token
+  inventory:
+    enabled: true
+    name: inventory
+    tier: backend
+    replicas: 1
+    image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/inventory-service:latest
+    imagePullPolicy: IfNotPresent
+    ports:
+    - name: http
+      containerPort: 8084
+      protocol: TCP
+    - name: metrics
+      containerPort: 9090
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi
+    env:
+    - name: SERVICE_NAME
+      value: inventory-service
+    - name: JWT_ISSUER
+      value: embedded-market-auth
+    - name: KAFKA_BROKERS
+      value: kafka:9092
+    - name: JWT_AUDIENCE
+      value: embedded-market
+    - name: POSTGRES_DSN
+      value: postgres://inventory:inventory@postgres-cluster-rw.storage.svc.cluster.local:5432/inventory-db-v1?sslmode=disable
+    - name: JWT_PUBLIC_KEY_FILE
+      value: /etc/secrets/jwt/public_key.pem
+    - name: HTTP_PORT
+      value: '8084'
+    - name: LOG_LEVEL
+      value: info
+    - name: ENVIRONMENT
+      value: development
+    health:
+      port: 8084
+      path: /healthz
+      readinessPath: /readyz
+    service:
+      enabled: true
+      name: inventory-service
+      type: ClusterIP
+      ports:
+      - name: http
+        port: 8084
+        targetPort: 8084
+        protocol: TCP
+      - name: metrics
+        port: 9090
+        targetPort: 9090
+        protocol: TCP
+    annotations:
+      env: dev
+    imagePullSecrets:
+    - name: artifact-registry-secret
+    volumeMounts:
+    - name: jwt-key-volume
+      mountPath: /etc/secrets/jwt/
+      readOnly: true
+    volumes:
+    - name: jwt-key-volume
+      secret:
+        secretName: jwt-token
+  notification:
+    enabled: true
+    name: notification
+    tier: backend
+    replicas: 1
+    image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/notification-service:latest
+    imagePullPolicy: IfNotPresent
+    ports:
+    - name: http
+      containerPort: 8090
+      protocol: TCP
+    - name: metrics
+      containerPort: 9090
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi
+    env:
+    - name: SERVICE_NAME
+      value: notification-service
+    - name: JWT_ISSUER
+      value: embedded-market-auth
+    - name: KAFKA_BROKERS
+      value: kafka:9092
+    - name: JWT_AUDIENCE
+      value: embedded-market
+    - name: POSTGRES_DSN
+      value: postgres://notification:notification@postgres-cluster-rw.storage.svc.cluster.local:5432/notification-db-v1?sslmode=disable
+    - name: JWT_PUBLIC_KEY_FILE
+      value: /etc/secrets/jwt/public_key.pem
+    - name: HTTP_PORT
+      value: '8090'
+    - name: LOG_LEVEL
+      value: info
+    - name: ENVIRONMENT
+      value: development
+    health:
+      port: 8090
+      path: /healthz
+      readinessPath: /readyz
+    service:
+      enabled: true
+      name: notification-service
+      type: ClusterIP
+      ports:
+      - name: http
+        port: 8090
+        targetPort: 8090
+        protocol: TCP
+      - name: metrics
+        port: 9090
+        targetPort: 9090
+        protocol: TCP
+    annotations:
+      env: dev
+    imagePullSecrets:
+    - name: artifact-registry-secret
+    volumeMounts:
+    - name: jwt-key-volume
+      mountPath: /etc/secrets/jwt/
+      readOnly: true
+    volumes:
+    - name: jwt-key-volume
+      secret:
+        secretName: jwt-token
+  order:
+    enabled: true
+    name: order
+    tier: backend
+    replicas: 1
+    image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/order-service:latest
+    imagePullPolicy: IfNotPresent
+    ports:
+    - name: http
+      containerPort: 8087
+      protocol: TCP
+    - name: metrics
+      containerPort: 9090
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi
+    env:
+    - name: SERVICE_NAME
+      value: order-service
+    - name: JWT_ISSUER
+      value: embedded-market-auth
+    - name: JWT_AUDIENCE
+      value: embedded-market
+    - name: KAFKA_BROKERS
+      value: kafka:9092
+    - name: POSTGRES_DSN
+      value: postgres://order:order@postgres-cluster-rw.storage.svc.cluster.local:5432/order-db-v1?sslmode=disable
+    - name: JWT_PUBLIC_KEY_FILE
+      value: /etc/secrets/jwt/public_key.pem
+    - name: HTTP_PORT
+      value: '8087'
+    - name: LOG_LEVEL
+      value: info
+    - name: ENVIRONMENT
+      value: development
+    health:
+      port: 8087
+      path: /healthz
+      readinessPath: /readyz
+    service:
+      enabled: true
+      name: order-service
+      type: ClusterIP
+      ports:
+      - name: http
+        port: 8087
+        targetPort: 8087
+        protocol: TCP
+      - name: metrics
+        port: 9090
+        targetPort: 9090
+        protocol: TCP
+    annotations:
+      env: dev
+    imagePullSecrets:
+    - name: artifact-registry-secret
+    volumeMounts:
+    - name: jwt-key-volume
+      mountPath: /etc/secrets/jwt/
+      readOnly: true
+    volumes:
+    - name: jwt-key-volume
+      secret:
+        secretName: jwt-token
+  payment:
+    enabled: true
+    name: payment
+    tier: backend
+    replicas: 1
+    image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/payment-service:latest
+    imagePullPolicy: IfNotPresent
+    ports:
+    - name: http
+      containerPort: 8089
+      protocol: TCP
+    - name: metrics
+      containerPort: 9090
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi
+    env:
+    - name: SERVICE_NAME
+      value: payment-service
+    - name: JWT_ISSUER
+      value: embedded-market-auth
+    - name: JWT_AUDIENCE
+      value: embedded-market
+    - name: KAFKA_BROKERS
+      value: kafka:9092
+    - name: POSTGRES_DSN
+      value: postgres://payment:payment@postgres-cluster-rw.storage.svc.cluster.local:5432/payment-db-v1?sslmode=disable
+    - name: JWT_PUBLIC_KEY_FILE
+      value: /etc/secrets/jwt/public_key.pem
+    - name: HTTP_PORT
+      value: '8089'
+    - name: LOG_LEVEL
+      value: info
+    - name: ENVIRONMENT
+      value: development
+    health:
+      port: 8089
+      path: /healthz
+      readinessPath: /readyz
+    service:
+      enabled: true
+      name: payment-service
+      type: ClusterIP
+      ports:
+      - name: http
+        port: 8089
+        targetPort: 8089
+        protocol: TCP
+      - name: metrics
+        port: 9090
+        targetPort: 9090
+        protocol: TCP
+    annotations:
+      env: dev
+    imagePullSecrets:
+    - name: artifact-registry-secret
+    volumeMounts:
+    - name: jwt-key-volume
+      mountPath: /etc/secrets/jwt/
+      readOnly: true
+    volumes:
+    - name: jwt-key-volume
+      secret:
+        secretName: jwt-token
+  pricing:
+    enabled: true
+    name: pricing
+    tier: backend
+    replicas: 1
+    image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/pricing-service:latest
+    imagePullPolicy: IfNotPresent
+    ports:
+    - name: http
+      containerPort: 8085
+      protocol: TCP
+    - name: metrics
+      containerPort: 9090
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi
+    env:
+    - name: SERVICE_NAME
+      value: pricing-service
+    - name: JWT_ISSUER
+      value: embedded-market-auth
+    - name: JWT_AUDIENCE
+      value: embedded-market
+    - name: KAFKA_BROKERS
+      value: kafka:9092
+    - name: POSTGRES_DSN
+      value: postgres://pricing:pricing@postgres-cluster-rw.storage.svc.cluster.local:5432/pricing-db-v1?sslmode=disable
+    - name: JWT_PUBLIC_KEY_FILE
+      value: /etc/secrets/jwt/public_key.pem
+    - name: HTTP_PORT
+      value: '8085'
+    - name: LOG_LEVEL
+      value: info
+    - name: ENVIRONMENT
+      value: development
+    health:
+      port: 8085
+      path: /healthz
+      readinessPath: /readyz
+    service:
+      enabled: true
+      name: pricing-service
+      type: ClusterIP
+      ports:
+      - name: http
+        port: 8085
+        targetPort: 8085
+        protocol: TCP
+      - name: metrics
+        port: 9090
+        targetPort: 9090
+        protocol: TCP
+    annotations:
+      env: dev
+    imagePullSecrets:
+    - name: artifact-registry-secret
+    volumeMounts:
+    - name: jwt-key-volume
+      mountPath: /etc/secrets/jwt/
+      readOnly: true
+    volumes:
+    - name: jwt-key-volume
+      secret:
+        secretName: jwt-token
+  recommendation:
+    enabled: true
+    name: recommendation
+    tier: backend
+    replicas: 1
+    image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/recommendation-service:latest
+    imagePullPolicy: IfNotPresent
+    ports:
+    - name: http
+      containerPort: 8093
+      protocol: TCP
+    - name: metrics
+      containerPort: 9090
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi
+    env:
+    - name: SERVICE_NAME
+      value: recommendation-service
+    - name: JWT_ISSUER
+      value: embedded-market-auth
+    - name: JWT_AUDIENCE
+      value: embedded-market
+    - name: POSTGRES_DSN
+      value: postgres://recommendation:recommendation@postgres-cluster-rw.storage.svc.cluster.local:5432/recommendation-db-v1?sslmode=disable
+    - name: JWT_PUBLIC_KEY_FILE
+      value: /etc/secrets/jwt/public_key.pem
+    - name: HTTP_PORT
+      value: '8093'
+    - name: LOG_LEVEL
+      value: info
+    - name: ENVIRONMENT
+      value: development
+    health:
+      port: 8093
+      path: /healthz
+      readinessPath: /readyz
+    service:
+      enabled: true
+      name: recommendation-service
+      type: ClusterIP
+      ports:
+      - name: http
+        port: 8093
+        targetPort: 8093
+        protocol: TCP
+      - name: metrics
+        port: 9090
+        targetPort: 9090
+        protocol: TCP
+    annotations:
+      env: dev
+    imagePullSecrets:
+    - name: artifact-registry-secret
+    volumeMounts:
+    - name: jwt-key-volume
+      mountPath: /etc/secrets/jwt/
+      readOnly: true
+    volumes:
+    - name: jwt-key-volume
+      secret:
+        secretName: jwt-token
+  review:
+    enabled: true
+    name: review
+    tier: backend
+    replicas: 1
+    image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/review-service:latest
+    imagePullPolicy: IfNotPresent
+    ports:
+    - name: http
+      containerPort: 8092
+      protocol: TCP
+    - name: metrics
+      containerPort: 9090
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi
+    env:
+    - name: SERVICE_NAME
+      value: review-service
+    - name: JWT_ISSUER
+      value: embedded-market-auth
+    - name: JWT_AUDIENCE
+      value: embedded-market
+    - name: POSTGRES_DSN
+      value: postgres://review:review@postgres-cluster-rw.storage.svc.cluster.local:5432/review-db-v1?sslmode=disable
+    - name: JWT_PUBLIC_KEY_FILE
+      value: /etc/secrets/jwt/public_key.pem
+    - name: HTTP_PORT
+      value: '8092'
+    - name: LOG_LEVEL
+      value: info
+    - name: ENVIRONMENT
+      value: development
+    health:
+      port: 8092
+      path: /healthz
+      readinessPath: /readyz
+    service:
+      enabled: true
+      name: review-service
+      type: ClusterIP
+      ports:
+      - name: http
+        port: 8092
+        targetPort: 8092
+        protocol: TCP
+      - name: metrics
+        port: 9090
+        targetPort: 9090
+        protocol: TCP
+    annotations:
+      env: dev
+    imagePullSecrets:
+    - name: artifact-registry-secret
+    volumeMounts:
+    - name: jwt-key-volume
+      mountPath: /etc/secrets/jwt/
+      readOnly: true
+    volumes:
+    - name: jwt-key-volume
+      secret:
+        secretName: jwt-token
+  search:
+    enabled: true
+    name: search
+    tier: backend
+    replicas: 1
+    image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/search-service:latest
+    imagePullPolicy: IfNotPresent
+    ports:
+    - name: http
+      containerPort: 8091
+      protocol: TCP
+    - name: metrics
+      containerPort: 9090
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi
+    env:
+    - name: SERVICE_NAME
+      value: search-service
+    - name: JWT_ISSUER
+      value: embedded-market-auth
+    - name: JWT_AUDIENCE
+      value: embedded-market
+    - name: POSTGRES_DSN
+      value: postgres://search:search@postgres-cluster-rw.storage.svc.cluster.local:5432/search-db-v1?sslmode=disable
+    - name: JWT_PUBLIC_KEY_FILE
+      value: /etc/secrets/jwt/public_key.pem
+    - name: HTTP_PORT
+      value: '8091'
+    - name: LOG_LEVEL
+      value: info
+    - name: ENVIRONMENT
+      value: development
+    health:
+      port: 8091
+      path: /healthz
+      readinessPath: /readyz
+    service:
+      enabled: true
+      name: search-service
+      type: ClusterIP
+      ports:
+      - name: http
+        port: 8091
+        targetPort: 8091
+        protocol: TCP
+      - name: metrics
+        port: 9090
+        targetPort: 9090
+        protocol: TCP
+    annotations:
+      env: dev
+    imagePullSecrets:
+    - name: artifact-registry-secret
+    volumeMounts:
+    - name: jwt-key-volume
+      mountPath: /etc/secrets/jwt/
+      readOnly: true
+    volumes:
+    - name: jwt-key-volume
+      secret:
+        secretName: jwt-token
+  shipping:
+    enabled: true
+    name: shipping
+    tier: backend
+    replicas: 1
+    image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/shipping-service:latest
+    imagePullPolicy: IfNotPresent
+    ports:
+    - name: http
+      containerPort: 8088
+      protocol: TCP
+    - name: metrics
+      containerPort: 9090
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi
+    env:
+    - name: SERVICE_NAME
+      value: shipping-service
+    - name: JWT_ISSUER
+      value: embedded-market-auth
+    - name: JWT_AUDIENCE
+      value: embedded-market
+    - name: KAFKA_BROKERS
+      value: kafka:9092
+    - name: POSTGRES_DSN
+      value: postgres://shipping:shipping@postgres-cluster-rw.storage.svc.cluster.local:5432/shipping-db-v1?sslmode=disable
+    - name: JWT_PUBLIC_KEY_FILE
+      value: /etc/secrets/jwt/public_key.pem
+    - name: HTTP_PORT
+      value: '8088'
+    - name: LOG_LEVEL
+      value: info
+    - name: ENVIRONMENT
+      value: development
+    health:
+      port: 8088
+      path: /healthz
+      readinessPath: /readyz
+    service:
+      enabled: true
+      name: shipping-service
+      type: ClusterIP
+      ports:
+      - name: http
+        port: 8088
+        targetPort: 8088
+        protocol: TCP
+      - name: metrics
+        port: 9090
+        targetPort: 9090
+        protocol: TCP
+    annotations:
+      env: dev
+    imagePullSecrets:
+    - name: artifact-registry-secret
+    volumeMounts:
+    - name: jwt-key-volume
+      mountPath: /etc/secrets/jwt/
+      readOnly: true
+    volumes:
+    - name: jwt-key-volume
+      secret:
+        secretName: jwt-token
+  user:
+    enabled: true
+    name: user
+    tier: backend
+    replicas: 1
+    image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/user-service:latest
+    imagePullPolicy: IfNotPresent
+    ports:
+    - name: http
+      containerPort: 8082
+      protocol: TCP
+    - name: metrics
+      containerPort: 9090
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi
+    env:
+    - name: SERVICE_NAME
+      value: user-service
+    - name: JWT_ISSUER
+      value: embedded-market-auth
+    - name: JWT_AUDIENCE
+      value: embedded-market
+    - name: KAFKA_BROKERS
+      value: kafka:9092
+    - name: POSTGRES_DSN
+      value: postgres://user:user@postgres-cluster-rw.storage.svc.cluster.local:5432/user-db-v1?sslmode=disable
+    - name: JWT_PUBLIC_KEY_FILE
+      value: /etc/secrets/jwt/public_key.pem
+    - name: HTTP_PORT
+      value: '8082'
+    - name: LOG_LEVEL
+      value: info
+    - name: ENVIRONMENT
+      value: development
+    health:
+      port: 8082
+      path: /healthz
+      readinessPath: /readyz
+    service:
+      enabled: true
+      name: user-service
+      type: ClusterIP
+      ports:
+      - name: http
+        port: 8082
+        targetPort: 8082
+        protocol: TCP
+      - name: metrics
+        port: 9090
+        targetPort: 9090
+        protocol: TCP
+    annotations:
+      env: dev
+    imagePullSecrets:
+    - name: artifact-registry-secret
+    volumeMounts:
+    - name: jwt-key-volume
+      mountPath: /etc/secrets/jwt/
+      readOnly: true
+    volumes:
+    - name: jwt-key-volume
+      secret:
+        secretName: jwt-token
+  wishlist:
+    enabled: true
+    name: wishlist
+    tier: backend
+    replicas: 1
+    image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/wishlist-service:latest
+    imagePullPolicy: IfNotPresent
+    ports:
+    - name: http
+      containerPort: 8095
+      protocol: TCP
+    - name: metrics
+      containerPort: 9090
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi
+    env:
+    - name: SERVICE_NAME
+      value: wishlist-service
+    - name: JWT_ISSUER
+      value: embedded-market-auth
+    - name: JWT_AUDIENCE
+      value: embedded-market
+    - name: KAFKA_BROKERS
+      value: kafka:9092
+    - name: POSTGRES_DSN
+      value: postgres://wishlist:wishlist@postgres-cluster-rw.storage.svc.cluster.local:5432/wishlist-db-v1?sslmode=disable
+    - name: JWT_PUBLIC_KEY_FILE
+      value: /etc/secrets/jwt/public_key.pem
+    - name: HTTP_PORT
+      value: '8095'
+    - name: LOG_LEVEL
+      value: info
+    - name: ENVIRONMENT
+      value: development
+    health:
+      port: 8095
+      path: /healthz
+      readinessPath: /readyz
+    service:
+      enabled: true
+      name: wishlist-service
+      type: ClusterIP
+      ports:
+      - name: http
+        port: 8095
+        targetPort: 8095
+        protocol: TCP
+      - name: metrics
+        port: 9090
+        targetPort: 9090
+        protocol: TCP
+    annotations:
+      env: dev
+    imagePullSecrets:
+    - name: artifact-registry-secret
+    volumeMounts:
+    - name: jwt-key-volume
+      mountPath: /etc/secrets/jwt/
+      readOnly: true
+    volumes:
+    - name: jwt-key-volume
+      secret:
+        secretName: jwt-token
+  frontend:
+    enabled: true
+    name: frontend
+    tier: web
+    replicas: 1
+    image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/frontend-service:latest
+    imagePullPolicy: IfNotPresent
+    ports:
+    - containerPort: 80
+      name: http
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi
+    env:
+    - name: NODE_ENV
+      value: production
+    - name: API_URL
+      value: https://api.yourdomain.com
+    health:
+      port: 80
+      path: /
+      readinessPath: /
+    service:
+      enabled: false
+      name: frontend-service
+      type: ClusterIP
+      ports: []
+    livenessProbe:
+      httpGet:
+        path: /
+        port: 80
+      initialDelaySeconds: 15
+      periodSeconds: 20
+      timeoutSeconds: 3
+      failureThreshold: 3
+    readinessProbe:
+      httpGet:
+        path: /
+        port: 80
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      successThreshold: 1
+      failureThreshold: 3
+    strategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxSurge: 1
+        maxUnavailable: 1
+    startupProbe: null
+    terminationGracePeriodSeconds: null
+    podSecurityContext: null
+    containerSecurityContext: null
+    lifecycle: null
+    nodeSelector: null
+    affinity: null
+    tolerations: null
+jwtSecrets:
+- name: jwt-token
+  namespace: application
+  create: false
+  type: Opaque
+  stringData:
+    public_key.pem: ''
+- name: jwt-token-private
+  namespace: application
+  create: false
+  type: Opaque
+  stringData:
+    public_key.pem: ''
+serviceMonitor:
+  enabled: true
+  name: application-monitor
+  namespace: application
+  labels:
+    release: prometheus-stack
+  namespaceSelector:
+    matchNames:
+    - application
+  selector:
+    matchLabels:
+      application: service
+  endpoints:
+  - port: tcp-prometheus
+    path: /metrics
+    interval: 15s
+    scrapeTimeout: 10s
+    relabelings:
+    - separator: ;
+      regex: __meta_kubernetes_pod_name
+      replacement: $1
+      sourceLabels:
+      - __meta_kubernetes_pod_name
+      targetLabel: kubernetes_pod_name
+  - port: metrics
+    path: /metrics
+    interval: 15s
+    scrapeTimeout: 10s
+    relabelings:
+    - separator: ;
+      regex: __meta_kubernetes_pod_name
+      replacement: $1
+      sourceLabels:
+      - __meta_kubernetes_pod_name
+      targetLabel: kubernetes_pod_name
+kafkaTopics:
+  enabled: true
+  namespace: kafka
+  cluster: prod-cluster
+  defaults:
+    partitions: 3
+    replicas: 3
+    config:
+      cleanup.policy: delete
+      retention.ms: 604800000
+      min.insync.replicas: 2
+  topics:
+  - name: user.registered
+  - name: user.profile.created
+  - name: user.profile.updated
+  - name: user.addresses.updated
+  - name: user.preferences.updated
+  - name: user.wishlist.updated
+  - name: product.created
+  - name: product.updated
+  - name: product.compatibility.updated
+  - name: stock.adjusted
+  - name: stock.reserved
+  - name: stock.released
+  - name: price.changed
+  - name: promotion.started
+  - name: cart.checked_out
+  - name: order.created
+  - name: order.status.updated
+  - name: shipment.created
+  - name: shipment.status.updated
+  - name: payment.created
+  - name: payment.succeeded
+  - name: payment.failed
+  - name: payment.refunded
+  - name: user.followed
+  - name: project.created
+  - name: project.updated
+  - name: version.released
+  - name: artifact.uploaded
+  - name: download.completed
+  - name: review.created
+  - name: comment.created
+  - name: star.added
+  - name: notification.sent
+  - name: analytics.updated

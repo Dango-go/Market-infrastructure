@@ -1,0 +1,202 @@
+{{- range $name, $svc := .Values.services }}
+{{- if $svc.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ default $name $svc.name }}
+  namespace: {{ default $.Values.namespace $svc.namespace }}
+  labels:
+    {{- include "embedded-market-services.labels" $ | nindent 4 }}
+    {{- include "embedded-market-services.serviceLabels" (dict "name" (default $name $svc.name) "tier" $svc.tier) | nindent 4 }}
+    {{- with $svc.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with $svc.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ default $.Values.deploymentDefaults.replicas $svc.replicas }}
+  selector:
+    matchLabels:
+      app: {{ default $name $svc.name }}
+      tier: {{ $svc.tier }}
+  strategy:
+    {{- toYaml (default $.Values.deploymentDefaults.strategy $svc.strategy) | nindent 4 }}
+  template:
+    metadata:
+      labels:
+        app: {{ default $name $svc.name }}
+        tier: {{ $svc.tier }}
+        {{- with $svc.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with $svc.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- if hasKey $svc "imagePullSecrets" }}
+      {{- with $svc.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- else }}
+      {{- with $.Values.deploymentDefaults.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- end }}
+      {{- if hasKey $svc "terminationGracePeriodSeconds" }}
+      {{- with $svc.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ . }}
+      {{- end }}
+      {{- else }}
+      terminationGracePeriodSeconds: {{ $.Values.deploymentDefaults.terminationGracePeriodSeconds }}
+      {{- end }}
+      {{- if hasKey $svc "podSecurityContext" }}
+      {{- with $svc.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- else }}
+      {{- with $.Values.deploymentDefaults.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- end }}
+      {{- with $svc.initContainers }}
+      initContainers:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ default (default $name $svc.name) $svc.containerName }}
+          image: {{ required (printf "services.%s.image is required" $name) $svc.image | quote }}
+          imagePullPolicy: {{ default $.Values.deploymentDefaults.imagePullPolicy $svc.imagePullPolicy }}
+          {{- with $svc.ports }}
+          ports:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with (default $.Values.deploymentDefaults.resources $svc.resources) }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $svc.envFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $svc.env }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- if hasKey $svc "containerSecurityContext" }}
+          {{- with $svc.containerSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- else }}
+          {{- with $.Values.deploymentDefaults.containerSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- end }}
+          {{- $health := default dict $svc.health }}
+          {{- $healthPort := default $svc.httpPort $health.port }}
+          {{- $healthPath := default "/healthz" $health.path }}
+          {{- $readyPath := default "/readyz" $health.readinessPath }}
+          {{- if hasKey $svc "startupProbe" }}
+          {{- with $svc.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- else if $.Values.deploymentDefaults.probes.startup.enabled }}
+          startupProbe:
+            httpGet:
+              path: {{ $healthPath }}
+              port: {{ $healthPort }}
+            failureThreshold: {{ $.Values.deploymentDefaults.probes.startup.failureThreshold }}
+            periodSeconds: {{ $.Values.deploymentDefaults.probes.startup.periodSeconds }}
+          {{- end }}
+          {{- if $svc.livenessProbe }}
+          livenessProbe:
+            {{- toYaml $svc.livenessProbe | nindent 12 }}
+          {{- else if $.Values.deploymentDefaults.probes.liveness.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ $healthPath }}
+              port: {{ $healthPort }}
+            initialDelaySeconds: {{ $.Values.deploymentDefaults.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ $.Values.deploymentDefaults.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ $.Values.deploymentDefaults.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ $.Values.deploymentDefaults.probes.liveness.failureThreshold }}
+          {{- end }}
+          {{- if $svc.readinessProbe }}
+          readinessProbe:
+            {{- toYaml $svc.readinessProbe | nindent 12 }}
+          {{- else if $.Values.deploymentDefaults.probes.readiness.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ $readyPath }}
+              port: {{ $healthPort }}
+            initialDelaySeconds: {{ $.Values.deploymentDefaults.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ $.Values.deploymentDefaults.probes.readiness.periodSeconds }}
+            successThreshold: {{ $.Values.deploymentDefaults.probes.readiness.successThreshold }}
+            {{- with $.Values.deploymentDefaults.probes.readiness.failureThreshold }}
+            failureThreshold: {{ . }}
+            {{- end }}
+          {{- end }}
+          {{- if hasKey $svc "lifecycle" }}
+          {{- with $svc.lifecycle }}
+          lifecycle:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- else }}
+          {{- with $.Values.deploymentDefaults.lifecycle }}
+          lifecycle:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- end }}
+          {{- with $svc.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with $svc.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if hasKey $svc "nodeSelector" }}
+      {{- with $svc.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- else }}
+      {{- with $.Values.deploymentDefaults.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- end }}
+      {{- if hasKey $svc "affinity" }}
+      {{- with $svc.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- else }}
+      {{- with $.Values.deploymentDefaults.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- end }}
+      {{- if hasKey $svc "tolerations" }}
+      {{- with $svc.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- else }}
+      {{- with $.Values.deploymentDefaults.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- end }}
+{{- end }}
+{{- end }}

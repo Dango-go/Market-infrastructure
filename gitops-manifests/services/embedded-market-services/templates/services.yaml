@@ -1,0 +1,27 @@
+{{- range $name, $svc := .Values.services }}
+{{- if and $svc.enabled $svc.service.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ default (printf "%s-service" (default $name $svc.name)) $svc.service.name }}
+  namespace: {{ default $.Values.namespace $svc.namespace }}
+  labels:
+    {{- include "embedded-market-services.labels" $ | nindent 4 }}
+    {{- include "embedded-market-services.serviceLabels" (dict "name" (default $name $svc.name) "tier" $svc.tier) | nindent 4 }}
+    {{- with $svc.service.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with $svc.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ default "ClusterIP" $svc.service.type }}
+  selector:
+    app: {{ default $name $svc.name }}
+    tier: {{ $svc.tier }}
+  ports:
+    {{- toYaml $svc.service.ports | nindent 4 }}
+{{- end }}
+{{- end }}

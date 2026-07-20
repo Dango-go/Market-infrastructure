@@ -1,0 +1,24 @@
+{{- if .Values.kafkaTopics.enabled }}
+{{- range .Values.kafkaTopics.topics }}
+{{- $resourceName := default (.name | replace "_" "-") .resourceName }}
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: {{ $resourceName }}
+  namespace: {{ default $.Values.kafkaTopics.namespace .namespace }}
+  labels:
+    strimzi.io/cluster: {{ default $.Values.kafkaTopics.cluster .cluster }}
+    {{- with .labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  {{- if ne $resourceName .name }}
+  topicName: {{ .name }}
+  {{- end }}
+  partitions: {{ default $.Values.kafkaTopics.defaults.partitions .partitions }}
+  replicas: {{ default $.Values.kafkaTopics.defaults.replicas .replicas }}
+  config:
+    {{- toYaml (default $.Values.kafkaTopics.defaults.config .config) | nindent 4 }}
+{{- end }}
+{{- end }}

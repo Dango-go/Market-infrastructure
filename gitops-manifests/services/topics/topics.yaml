@@ -1,5 +1,5 @@
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: user.registered
@@ -14,7 +14,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: user.profile.created
@@ -29,7 +29,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1
 kind: KafkaTopic
 metadata:
   name: user.profile.updated
@@ -44,7 +44,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: user.addresses.updated
@@ -59,7 +59,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: user.preferences.updated
@@ -74,7 +74,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: user.wishlist.updated
@@ -89,7 +89,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: product.created
@@ -104,7 +104,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: product.updated
@@ -119,7 +119,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: product.compatibility.updated
@@ -134,7 +134,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: stock.adjusted
@@ -149,7 +149,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: stock.reserved
@@ -164,7 +164,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: stock.released
@@ -179,7 +179,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: price.changed
@@ -194,7 +194,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: promotion.started
@@ -209,7 +209,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: cart.checked_out
@@ -224,7 +224,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: order.created
@@ -239,7 +239,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: order.status.updated
@@ -254,7 +254,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: shipment.created
@@ -269,7 +269,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: shipment.status.updated
@@ -284,7 +284,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: payment.created
@@ -299,7 +299,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: payment.succeeded
@@ -314,7 +314,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: payment.failed
@@ -329,7 +329,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: payment.refunded
@@ -344,7 +344,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: user.followed
@@ -359,7 +359,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: project.created
@@ -374,7 +374,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: project.updated
@@ -389,7 +389,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: version.released
@@ -404,7 +404,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: artifact.uploaded
@@ -419,7 +419,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: download.completed
@@ -434,7 +434,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: review.created
@@ -449,7 +449,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: comment.created
@@ -464,7 +464,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: star.added
@@ -479,7 +479,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1 
 kind: KafkaTopic
 metadata:
   name: notification.sent
@@ -494,7 +494,7 @@ spec:
     retention.ms: 604800000
     min.insync.replicas: 2
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1
 kind: KafkaTopic
 metadata:
   name: analytics.updated

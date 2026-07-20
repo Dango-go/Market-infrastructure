@@ -2,24 +2,21 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: frontend
-  namespace: application 
+  namespace: application
   labels:
     app: frontend
     tier: web
 spec:
-  replicas: 3
- 
+  replicas: 1
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxSurge: 1        
-      maxUnavailable: 1  
- 
+      maxSurge: 1
+      maxUnavailable: 1
   selector:
     matchLabels:
       app: frontend
       tier: web
- 
   template:
     metadata:
       labels:
@@ -28,40 +25,31 @@ spec:
     spec:
       containers:
       - name: frontend-container
- 
         image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/frontend-service:latest
         imagePullPolicy: IfNotPresent
-        
         ports:
         - containerPort: 80
           name: http
-          
         env:
         - name: NODE_ENV
-          value: "production"
+          value: production
         - name: API_URL
-          value: "https://api.yourdomain.com"
-          
-         
+          value: https://api.yourdomain.com
         resources:
           requests:
-            memory: "128Mi"
-            cpu: "100m"
+            cpu: 50m
+            memory: 64Mi
           limits:
-            memory: "256Mi"
-            cpu: "500m"
-            
- 
+            cpu: 50m
+            memory: 64Mi
         livenessProbe:
           httpGet:
             path: /
             port: 80
-          initialDelaySeconds: 15 
-          periodSeconds: 20      
-          timeoutSeconds: 3        
-          failureThreshold: 3      
-          
-   
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          timeoutSeconds: 3
+          failureThreshold: 3
         readinessProbe:
           httpGet:
             path: /
@@ -70,5 +58,3 @@ spec:
           periodSeconds: 10
           successThreshold: 1
           failureThreshold: 3
-          
- 

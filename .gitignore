@@ -15,3 +15,4 @@ dist/
 README.md
 notes.md
 /gitops-manifests/secrets
+*credentials.md

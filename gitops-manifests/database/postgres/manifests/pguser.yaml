@@ -1,13 +1,14 @@
 apiVersion: postgresql.cnpg.io/v1
 kind: DatabaseRole
 metadata:
-  name: analytics-user   # Resource name
+  name: analytics-user
   namespace: storage
 spec:
   cluster:
-    name: postgres-cluster # cluster name
-  name: analytics   # User name
-
+    name: postgres-cluster
+  name: analytics
+  passwordSecret:
+    name: analytics-custom-secret
 ---
 apiVersion: postgresql.cnpg.io/v1
 kind: DatabaseRole
@@ -18,7 +19,8 @@ spec:
   cluster:
     name: postgres-cluster
   name: api-gateway
-
+  passwordSecret:
+    name: api-gateway-custom-secret
 ---
 apiVersion: postgresql.cnpg.io/v1
 kind: DatabaseRole
@@ -29,7 +31,8 @@ spec:
   cluster:
     name: postgres-cluster
   name: auth
-
+  passwordSecret:
+    name: auth-custom-secret
 ---
 apiVersion: postgresql.cnpg.io/v1
 kind: DatabaseRole
@@ -40,7 +43,8 @@ spec:
   cluster:
     name: postgres-cluster
   name: cart
-
+  passwordSecret:
+    name: cart-custom-secret
 ---
 apiVersion: postgresql.cnpg.io/v1
 kind: DatabaseRole
@@ -51,7 +55,8 @@ spec:
   cluster:
     name: postgres-cluster
   name: catalog
-
+  passwordSecret:
+    name: catalog-custom-secret
 ---
 apiVersion: postgresql.cnpg.io/v1
 kind: DatabaseRole
@@ -62,7 +67,8 @@ spec:
   cluster:
     name: postgres-cluster
   name: inventory
-
+  passwordSecret:
+    name: inventory-custom-secret
 ---
 apiVersion: postgresql.cnpg.io/v1
 kind: DatabaseRole
@@ -73,7 +79,8 @@ spec:
   cluster:
     name: postgres-cluster
   name: notification
-
+  passwordSecret:
+    name: notification-custom-secret
 ---
 apiVersion: postgresql.cnpg.io/v1
 kind: DatabaseRole
@@ -84,7 +91,8 @@ spec:
   cluster:
     name: postgres-cluster
   name: order
-
+  passwordSecret:
+    name: order-custom-secret
 ---
 apiVersion: postgresql.cnpg.io/v1
 kind: DatabaseRole
@@ -95,7 +103,8 @@ spec:
   cluster:
     name: postgres-cluster
   name: payment
-
+  passwordSecret:
+    name: payment-custom-secret
 ---
 apiVersion: postgresql.cnpg.io/v1
 kind: DatabaseRole
@@ -106,7 +115,8 @@ spec:
   cluster:
     name: postgres-cluster
   name: pricing
-
+  passwordSecret:
+    name: pricing-custom-secret
 ---
 apiVersion: postgresql.cnpg.io/v1
 kind: DatabaseRole
@@ -117,7 +127,8 @@ spec:
   cluster:
     name: postgres-cluster
   name: recommendation
-
+  passwordSecret:
+    name: recommendation-custom-secret
 ---
 apiVersion: postgresql.cnpg.io/v1
 kind: DatabaseRole
@@ -128,7 +139,8 @@ spec:
   cluster:
     name: postgres-cluster
   name: review
-
+  passwordSecret:
+    name: review-custom-secret
 ---
 apiVersion: postgresql.cnpg.io/v1
 kind: DatabaseRole
@@ -139,7 +151,8 @@ spec:
   cluster:
     name: postgres-cluster
   name: search
-
+  passwordSecret:
+    name: search-custom-secret
 ---
 apiVersion: postgresql.cnpg.io/v1
 kind: DatabaseRole
@@ -150,7 +163,8 @@ spec:
   cluster:
     name: postgres-cluster
   name: shipping
-
+  passwordSecret:
+    name: shipping-custom-secret
 ---
 apiVersion: postgresql.cnpg.io/v1
 kind: DatabaseRole
@@ -161,7 +175,8 @@ spec:
   cluster:
     name: postgres-cluster
   name: user
-
+  passwordSecret:
+    name: user-custom-secret
 ---
 apiVersion: postgresql.cnpg.io/v1
 kind: DatabaseRole
@@ -172,3 +187,5 @@ spec:
   cluster:
     name: postgres-cluster
   name: wishlist
+  passwordSecret:
+    name: wishlist-custom-secret

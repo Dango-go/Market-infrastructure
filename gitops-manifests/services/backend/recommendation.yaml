@@ -1,5 +1,4 @@
 apiVersion: apps/v1
- 
 kind: Deployment
 metadata:
   name: recommendation
@@ -9,206 +8,120 @@ metadata:
   annotations:
     env: dev
 spec:
-  replicas: 3  
-
+  replicas: 1
   selector:
     matchLabels:
       app: recommendation
       tier: backend
-
   strategy:
-    type: RollingUpdate 
+    type: RollingUpdate
     rollingUpdate:
-  
-       
-      maxUnavailable: 25%  # Min 75% work
-      maxSurge: 25%  # Min create at the one update
-
- 
+      maxUnavailable: 25%
+      maxSurge: 25%
   template:
     metadata:
       labels:
- 
         app: recommendation
         tier: backend
-
     spec:
-      #imagePullSecrets:
-        #- name: gitlab-registry-secret
-
- 
       terminationGracePeriodSeconds: 40
-
-   
       securityContext:
-        runAsNonRoot: true  
-        runAsUser: 1000     
-        fsGroup: 2000       
-
- 
-      #initContainers:
-        #- name: wait-for-database
-          #image: busybox:1.36
- 
-          #command: ['sh', '-c', 'until nc -z db-service.default.svc.cluster.local 5432; do echo "waiting for db"; sleep 2; done;']
-
-        #- name: run-database-migrations
-          #image: my-registry/payment-service-migrations:v1.2.0
- 
-          #envFrom:
-            #- secretRef:
-                #name: db-credentials-recommendation
-
- 
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 2000
       containers:
-        - name: recommendation
-          image: europe-central2-docker.pkg.dev/market-infrastructure/market-images/recommendation-service:latest
-          imagePullPolicy: IfNotPresent  
-
-          # docs which port listen
-          ports:
-            - name: http
-              containerPort: 8093
-              protocol: TCP
-            - name: metrics
-              containerPort: 9090
- 
-          resources:
-            requests:
-              cpu: 250m
-              memory: 512Mi
-            limits:
-              cpu: 1000m
-              memory: 1Gi
-
-          env:
-            - name: SERVICE_NAME
-              value: recommendation-service
-
-            - name: JWT_ISSUER
-              value: "embedded-market-auth"
- 
-            - name: JWT_AUDIENCE
-              value: "embedded-market"
-
-            - name: POSTGRES_DSN
-              value: "postgres://recommendation:recommendation@postgres-cluster-rw:5432/recommendation-db-v1?sslmode=disable"
-
-            # JWT
-            - name: JWT_PUBLIC_KEY_FILE
-              valueFrom:
-                secretKeyRef:
-                  name: jwt-token
-                  key: public_key.pem
-            
-            - name: HTTP_PORT
-              value: "8093"
-            
-            - name: LOG_LEVEL
-              value: "info"
-
-            - name: ENVIRONMENT
-              value: development
-
- 
- 
-          securityContext:
-            allowPrivilegeEscalation: false  
-            readOnlyRootFilesystem: true    
-            capabilities:
-              drop: ["ALL"]                  
-
- 
-          startupProbe:
-            httpGet:
-              path: /healthz
-              port: 8093
-            failureThreshold: 30
-            periodSeconds: 10
-
- 
-          livenessProbe:
-            httpGet:
-              path: /healthz
-              port: 8093
-            initialDelaySeconds: 5  
-            periodSeconds: 10       
-            timeoutSeconds: 3       
-            failureThreshold: 2     
- 
-          readinessProbe:
-            httpGet:
-              path: /readyz
-              port: 8093
-            initialDelaySeconds: 5
-            periodSeconds: 10
-            successThreshold: 1  
-
-   
-          lifecycle:
-            preStop:
- 
-              exec:
-                command: ["sh", "-c", "sleep 10"]
-
- 
+      - name: recommendation
+        image: dango17/recommendation-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8093
+          protocol: TCP
+        - name: metrics
+          containerPort: 9090
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 50m
+            memory: 64Mi
+        env:
+        - name: SERVICE_NAME
+          value: recommendation-service
+        - name: JWT_ISSUER
+          value: embedded-market-auth
+        - name: JWT_AUDIENCE
+          value: embedded-market
+        - name: POSTGRES_DSN
+          value: postgres://recommendation:recommendation@postgres-cluster-rw.storage.svc.cluster.local:5432/recommendation-db-v1?sslmode=disable
+        - name: JWT_PUBLIC_KEY_FILE
+          value: /etc/secrets/jwt/public_key.pem
+        - name: HTTP_PORT
+          value: '8093'
+        - name: LOG_LEVEL
+          value: info
+        - name: ENVIRONMENT
+          value: development
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        startupProbe:
+          httpGet:
+            path: /healthz
+            port: 8093
+          failureThreshold: 30
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8093
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 2
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8093
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - sh
+              - -c
+              - sleep 10
+        volumeMounts:
+        - name: jwt-key-volume
+          mountPath: /etc/secrets/jwt/
+          readOnly: true
       nodeSelector:
         type: development
-
       affinity:
- 
-        nodeAffinity:
- 
-          preferredDuringSchedulingIgnoredDuringExecution:  # soft
-            - weight: 100
-              preference:
-                matchExpressions:
-                  - key: topology.kubernetes.io/zone
-                    operator: In
-                    values:
-                      - "europe-central2"
- 
-        podAffinity:
- 
-          preferredDuringSchedulingIgnoredDuringExecution:  
-            - weight: 75
-              podAffinityTerm:
-                labelSelector:
-                  matchExpressions:
-                    - key: kubernetes.io/db
-                      operator: In
-                      values: 
-                        - recommendation
-                       
-                topologyKey: kubernetes.io/hostname   # Group by this label
- 
         podAntiAffinity:
- 
           requiredDuringSchedulingIgnoredDuringExecution:
-            - labelSelector:
-                matchExpressions:
-                  - key: env
-                    operator: In
-                    values:
-                      - production
-              topologyKey: kubernetes.io/hostname
- 
-      topologySpreadConstraints:
-        - maxSkew: 1    
-          topologyKey: topology.kubernetes.io/zone
-          whenUnsatisfiable: DoNotSchedule  # ScheduleAnyway alternative
-          labelSelector:
-            matchLabels:
-              app: recommendation
-
- 
+          - labelSelector:
+              matchExpressions:
+              - key: env
+                operator: In
+                values:
+                - production
+            topologyKey: kubernetes.io/hostname
       tolerations:
-        - key: "type"
-          operator: "Equal"
-          value: "development"
-          effect: "NoSchedule"
- 
-
+      - key: type
+        operator: Equal
+        value: development
+        effect: NoSchedule
+      volumes:
+      - name: jwt-key-volume
+        secret:
+          secretName: jwt-token
 ---
 apiVersion: v1
 kind: Service
@@ -225,11 +138,11 @@ spec:
     app: recommendation
     tier: backend
   ports:
-    - name: http
-      port: 8093
-      targetPort: 8093
-      protocol: TCP
-    - name: metrics
-      port: 9090
-      targetPort: 9090
-      protocol: TCP
+  - name: http
+    port: 8093
+    targetPort: 8093
+    protocol: TCP
+  - name: metrics
+    port: 9090
+    targetPort: 9090
+    protocol: TCP

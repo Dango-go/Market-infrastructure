@@ -246,7 +246,7 @@ controller:
 # ingress-nginx-controller-metrics
   metrics:
     enabled: true
-
+  # service
     service:
       enabled: true
       name: ingress-nginx
@@ -255,10 +255,15 @@ controller:
         app.kubernetes.io/component: controller
       servicePort: 10254  # Port which listen process nginx-exporter in pod nginx-ingress
       annotations: {}
-      
+  # service monitor
+    serviceMonitor:
+      enabled: true
+      additionalLabels:
+        release: prometheus-stack
+      namespace: ingress-nginx
  
   admissionWebhooks:
-    enabled: true
+    enabled: true  # auto open 10254
     failurePolicy: Fail
     timeoutSeconds: 10
 
