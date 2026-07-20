@@ -25,7 +25,7 @@ spec:
     spec:
       containers:
       - name: frontend-container
-        image: dango17/frontend-service:latest
+        image: dango17/frontend-service:frontend-fixed
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
