@@ -96,7 +96,7 @@ jobs:
       if: contains(steps.changed.outputs.all_changed_files, matrix.directory)
       uses: docker/login-action@v3
       with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        username: dango17
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
 
@@ -108,7 +108,7 @@ jobs:
         file: ${{ matrix.directory }}/Dockerfile
         push: true
         tags: |
-          ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image_name }}:latest
+          dango17/${{ matrix.image_name }}:latest
 
     - name: Push to Registry (frontend)
       if: matrix.service == 'frontend' && contains(steps.changed.outputs.all_changed_files, matrix.directory)
@@ -118,13 +118,13 @@ jobs:
         file: ${{ matrix.directory }}/Dockerfile
         push: true
         tags: |
-          ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image_name }}:latest
+          dango17/${{ matrix.image_name }}:latest
 
     - name: Trivy
       if: contains(steps.changed.outputs.all_changed_files, matrix.directory)
       uses: aquasecurity/trivy-action@master
       with:
-        image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image_name }}:latest
+        image-ref: dango17/${{ matrix.image_name }}:latest
         image-src: local   # Search images only on local docker daemon
         format: 'table'
         exit-code: '0'

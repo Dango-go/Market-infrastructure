@@ -12,4 +12,4 @@ dist/
 .vscode/
 .idea/
 /gitops-manifests/bootstrap/manifests/repo*
-README.md
+/README.md
