@@ -115,7 +115,7 @@ jobs:
       uses: docker/build-push-action@v6
       with:
         context: ./app/frontend
-        file: ${{ matrix.directory }}/Dockerfile
+        file: ./app/frontend/Dockerfile
         push: true
         tags: |
           dango17/${{ matrix.image_name }}:latest
