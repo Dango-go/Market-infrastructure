@@ -1,4 +1,4 @@
-FROM golang:1.25-bookworm AS builder
+FROM golang:1.25-bookworm AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
@@ -7,6 +7,6 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags='-s -w' -o
 
 FROM gcr.io/distroless/base-debian12:nonroot
 WORKDIR /app
-COPY --from=builder /out/cart /app/cart
+COPY --from=build /out/cart /app/cart
 EXPOSE 8086
 ENTRYPOINT ["/app/cart"]
