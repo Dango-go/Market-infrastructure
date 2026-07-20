@@ -46,9 +46,18 @@ spec:
           limits:
             cpu: 50m
             memory: 64Mi
+
+      # volumes
+      volumes:
+      - name: jwt-key-private-volume
+        secret:
+          secretName: jwt-token-private 
+      
         volumeMounts:
         - name: jwt-key-volume
           mountPath: /etc/secrets/jwt/
+          readOnly: true 
+
         env:
         - name: SERVICE_NAME
           value: analytics-service
@@ -119,10 +128,7 @@ spec:
         operator: Equal
         value: development
         effect: NoSchedule
-      volumes:
-      - name: jwt-key-volume
-        secret:
-          secretName: jwt-token-private
+
 ---
 apiVersion: v1
 kind: Service

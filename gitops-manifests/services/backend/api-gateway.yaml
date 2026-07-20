@@ -30,94 +30,105 @@ spec:
         runAsUser: 1000
         fsGroup: 2000
       containers:
-      - name: api-gateway
-        image: dango17/api-gateway-service:latest
-        imagePullPolicy: IfNotPresent
-        ports:
-        - name: http
-          containerPort: 8080
-          protocol: TCP
-        - name: metrics
-          containerPort: 9090
-        resources:
-          requests:
-            cpu: 50m
-            memory: 64Mi
-          limits:
-            cpu: 50m
-            memory: 64Mi
-        envFrom:
-        - configMapRef:
-            name: services-urls
-        env:
-        - name: SERVICE_NAME
-          value: api-gateway-service
-        - name: JWT_ISSUER
-          value: embedded-market-auth
-        - name: JWT_AUDIENCE
-          value: embedded-market
-        - name: JWT_PUBLIC_KEY_FILE
-          valueFrom:
-            secretKeyRef:
-              name: jwt-token
-              key: public_key.pem
-        - name: HTTP_PORT
-          value: '8080'
-        - name: LOG_LEVEL
-          value: info
-        - name: ENVIRONMENT
-          value: development
-        securityContext:
-          allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
-          capabilities:
-            drop:
-            - ALL
-        startupProbe:
-          httpGet:
-            path: /healthz
-            port: 8080
-          failureThreshold: 30
-          periodSeconds: 10
-        livenessProbe:
-          httpGet:
-            path: /healthz
-            port: 8080
-          initialDelaySeconds: 5
-          periodSeconds: 10
-          timeoutSeconds: 3
-          failureThreshold: 2
-        readinessProbe:
-          httpGet:
-            path: /readyz
-            port: 8080
-          initialDelaySeconds: 5
-          periodSeconds: 10
-          successThreshold: 1
-        lifecycle:
-          preStop:
-            exec:
-              command:
-              - sh
-              - -c
-              - sleep 10
+        - name: api-gateway
+          image: dango17/api-gateway-service:latest
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+
+          # volume mounts
+          volumeMounts:
+            - name: jwt-key-volume
+              mountPath: /etc/secrets/jwt/
+              readOnly: true
+
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 50m
+              memory: 64Mi
+          # urls services
+          envFrom:
+            - configMapRef:
+                name: services-urls
+          env:
+            - name: SERVICE_NAME
+              value: api-gateway-service
+            - name: JWT_ISSUER
+              value: embedded-market-auth
+            - name: JWT_AUDIENCE
+              value: embedded-market
+            - name: JWT_PUBLIC_KEY_FILE
+              value: /etc/secrets/jwt/public_key.pem
+            - name: HTTP_PORT
+              value: "8080"
+            - name: LOG_LEVEL
+              value: info
+            - name: ENVIRONMENT
+              value: development
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            failureThreshold: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 2
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - sh
+                  - -c
+                  - sleep 10
       nodeSelector:
         type: development
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchExpressions:
-              - key: env
-                operator: In
-                values:
-                - production
-            topologyKey: kubernetes.io/hostname
+            - labelSelector:
+                matchExpressions:
+                  - key: env
+                    operator: In
+                    values:
+                      - production
+              topologyKey: kubernetes.io/hostname
       tolerations:
-      - key: type
-        operator: Equal
-        value: development
-        effect: NoSchedule
+        - key: type
+          operator: Equal
+          value: development
+          effect: NoSchedule
+
+      # volumes
+      volumes:
+        - name: jwt-key-volume
+          secret:
+            secretName: jwt-token
+
 ---
 apiVersion: v1
 kind: Service
@@ -134,11 +145,11 @@ spec:
     app: api-gateway
     tier: backend
   ports:
-  - name: http
-    port: 8080
-    targetPort: 8080
-    protocol: TCP
-  - name: metrics
-    port: 9090
-    targetPort: 9090
-    protocol: TCP
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+      protocol: TCP

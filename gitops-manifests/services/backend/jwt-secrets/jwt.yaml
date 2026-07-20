@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: jwt-token-private  
+  name: jwt-token-private   
   namespace: application
 type: Opaque
 stringData:

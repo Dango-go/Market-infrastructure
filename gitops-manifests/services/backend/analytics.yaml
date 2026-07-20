@@ -33,16 +33,18 @@ spec:
       - name: analytics
         image: dango17/analytics-service:latest
         imagePullPolicy: IfNotPresent
-        volumeMounts:
-        - name: jwt-key-volume
-          mountPath: /etc/secrets/jwt/
-          readOnly: true
         ports:
         - name: http
           containerPort: 8094
           protocol: TCP
         - name: metrics
           containerPort: 9090
+
+        # volume mounts
+        volumeMounts:
+        - name: jwt-key-volume
+          mountPath: /etc/secrets/jwt/
+          readOnly: true
         resources:
           requests:
             cpu: 50m
@@ -101,10 +103,6 @@ spec:
               - sh
               - -c
               - sleep 10
-      volumes:
-      - name: jwt-key-volume
-        secret:
-          secretName: jwt-token
       nodeSelector:
         type: development
       affinity:
@@ -122,6 +120,12 @@ spec:
         operator: Equal
         value: development
         effect: NoSchedule
+
+      # volumes
+      volumes:
+      - name: jwt-key-volume
+        secret:
+          secretName: jwt-token
 ---
 apiVersion: v1
 kind: Service

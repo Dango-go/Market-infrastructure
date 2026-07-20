@@ -39,6 +39,12 @@ spec:
           protocol: TCP
         - name: metrics
           containerPort: 9090
+
+        # volume mounts
+        volumeMounts:
+        - name: jwt-key-volume
+          mountPath: /etc/secrets/jwt/
+          readOnly: true
         resources:
           requests:
             cpu: 50m
@@ -97,10 +103,6 @@ spec:
               - sh
               - -c
               - sleep 10
-        volumeMounts:
-        - name: jwt-key-volume
-          mountPath: /etc/secrets/jwt/
-          readOnly: true
       nodeSelector:
         type: development
       affinity:
@@ -118,6 +120,7 @@ spec:
         operator: Equal
         value: development
         effect: NoSchedule
+      # volumes
       volumes:
       - name: jwt-key-volume
         secret:
