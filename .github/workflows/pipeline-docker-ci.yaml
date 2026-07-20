@@ -104,8 +104,8 @@ jobs:
       #if: matrix.service != 'frontend' && contains(steps.changed.outputs.all_changed_files, matrix.directory)
       uses: docker/build-push-action@v6
       with:
-        context: .
-        file: ${{ matrix.directory }}/Dockerfile
+        context: ./app/backend
+        file: $./app/backend/services/${{ matrix.service }}/Dockerfile
         push: true
         no-cache: true
         tags: |
