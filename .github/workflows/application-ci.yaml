@@ -128,7 +128,6 @@ jobs:
       uses: docker/build-push-action@v6
       with:
         context: ./app/frontend
-        file: ${{ matrix.directory }}/Dockerfile
         push: true
         tags: |
           europe-central2-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_REPOSITORY }}/${{ matrix.image_name }}:latest
