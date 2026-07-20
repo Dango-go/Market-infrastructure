@@ -1,7 +1,8 @@
 FROM node:22-alpine AS build
 WORKDIR /app
+ENV NODE_OPTIONS="--max-old-space-size=2048"
 COPY package*.json ./
-RUN npm install
+RUN npm cache clean --force && npm install
 COPY . .
 ARG VITE_API_BASE_URL=
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
