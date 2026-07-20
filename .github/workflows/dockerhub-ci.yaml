@@ -117,6 +117,7 @@ jobs:
         context: ./app/frontend
         file: ${{ matrix.directory }}/Dockerfile
         push: true
+        no-cache: true
         tags: |
           dango17/${{ matrix.image_name }}:latest
 
