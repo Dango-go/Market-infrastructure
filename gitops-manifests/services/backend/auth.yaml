@@ -47,14 +47,9 @@ spec:
             cpu: 50m
             memory: 64Mi
 
-      # volumes
-      volumes:
-      - name: jwt-key-private-volume
-        secret:
-          secretName: jwt-token-private 
       
         volumeMounts:
-        - name: jwt-key-volume
+        - name: jwt-key-private-volume
           mountPath: /etc/secrets/jwt/
           readOnly: true 
 
@@ -128,6 +123,12 @@ spec:
         operator: Equal
         value: development
         effect: NoSchedule
+    
+    # volumes
+      volumes:
+      - name: jwt-key-private-volume
+        secret:
+          secretName: jwt-token-private 
 
 ---
 apiVersion: v1

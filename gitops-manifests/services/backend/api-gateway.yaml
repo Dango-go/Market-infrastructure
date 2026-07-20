@@ -32,6 +32,7 @@ spec:
       containers:
         - name: api-gateway
           image: dango17/api-gateway-service:latest
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 8080
