@@ -101,7 +101,7 @@ jobs:
 
 
     - name: Push to Registry (backend)
-      #if: matrix.service != 'frontend' && contains(steps.changed.outputs.all_changed_files, matrix.directory)
+      if: matrix.service != 'frontend' #&& contains(steps.changed.outputs.all_changed_files, matrix.directory)
       uses: docker/build-push-action@v6
       with:
         context: ./app/backend
@@ -112,7 +112,7 @@ jobs:
           ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image_name }}:latest
 
     - name: Push to Registry (frontend)
-      #if: matrix.service == 'frontend' && contains(steps.changed.outputs.all_changed_files, matrix.directory)
+      if: matrix.service == 'frontend' #&& contains(steps.changed.outputs.all_changed_files, matrix.directory)
       uses: docker/build-push-action@v6
       with:
         context: ./app/frontend
