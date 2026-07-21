@@ -8,7 +8,7 @@ metadata:
 spec:
   namespaceSelector:
     matchNames:
-      - application  
+      - application
 
   selector:
     matchLabels:
@@ -16,27 +16,22 @@ spec:
 
   endpoints:
 
-    - port: tcp-prometheus
-      path: /metrics
-      interval: 15s
-      scrapeTimeout: 10s 
- 
-      relabelings:
-        - separator: ;
-          regex: __meta_kubernetes_pod_name  # source labels
-          replacement: $1
-          sourceLabels:  # every parameters in settings will with label __meta__
-            - __meta_kubernetes_pod_name  # only pod name label
-          targetLabel: kubernetes_pod_name
-
-    - port: metrics 
+    - port: http
       path: /metrics
       interval: 15s
       scrapeTimeout: 10s
+
+      # rename labels
       relabelings:
         - separator: ;
-          regex: __meta_kubernetes_pod_name
+          regex: __meta_kubernetes_pod_name  #applies to labels from sourcelabels
           replacement: $1
-          sourceLabels:
-            - __meta_kubernetes_pod_name
-          targetLabel: kubernetes_pod_name
+          sourceLabels:  # every parameters in settings will with label __meta__
+            - __meta_kubernetes_pod_name  # only pod name label
+          targetLabel: kubernetes_pod_name  # final label
+
+        - sourceLabels: [__meta_kubernetes_pod_label_app]  # scanning every pod with this label. Coppied value and get app="value"
+          targetLabel: app
+
+        - sourceLabels: [__meta_kubernetes_pod_label_tier]
+          targetLabel: tier

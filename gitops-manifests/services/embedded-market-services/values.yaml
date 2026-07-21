@@ -1218,18 +1218,7 @@ serviceMonitor:
     matchLabels:
       application: service
   endpoints:
-  - port: tcp-prometheus
-    path: /metrics
-    interval: 15s
-    scrapeTimeout: 10s
-    relabelings:
-    - separator: ;
-      regex: __meta_kubernetes_pod_name
-      replacement: $1
-      sourceLabels:
-      - __meta_kubernetes_pod_name
-      targetLabel: kubernetes_pod_name
-  - port: metrics
+  - port: http
     path: /metrics
     interval: 15s
     scrapeTimeout: 10s
