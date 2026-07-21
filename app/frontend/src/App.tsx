@@ -5,6 +5,7 @@ import {
   ChevronRight,
   CircuitBoard,
   Clock3,
+  CreditCard,
   Cpu,
   Heart,
   LoaderCircle,
@@ -220,6 +221,40 @@ const deliveryOptions = [
 const accentCycle = ["lime", "cyan", "coral", "mint", "yellow", "rose"];
 const imagePositions = ["62% 44%", "72% 52%", "49% 56%", "43% 38%", "55% 63%", "67% 48%"];
 const deliveryCycle = ["Today, 18:00", "Tomorrow", "Today, 21:00", "2 days", "Friday"];
+const walletStorageKey = "embedded-market-wallet-balance-cents";
+const walletDefaultBalanceCents = 400;
+
+function paymentProvider(method: string) {
+  if (method === "apple-pay") return "demo-apple-pay";
+  if (method === "invoice") return "demo-invoice";
+  return "demo-card";
+}
+
+function cardDigits(cardNumber: string) {
+  return cardNumber.replace(/\D/g, "");
+}
+
+function formatCardNumber(cardNumber: string) {
+  return cardDigits(cardNumber).slice(0, 19).replace(/(.{4})/g, "$1 ").trim();
+}
+
+function formatExpiry(expiry: string) {
+  const digits = expiry.replace(/\D/g, "").slice(0, 4);
+  if (digits.length <= 2) return digits;
+  return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+}
+
+function cardLast4(cardNumber: string) {
+  const digits = cardDigits(cardNumber);
+  return digits.slice(-4) || "demo";
+}
+
+function createDemoID(prefix: string) {
+  const suffix = typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID().slice(0, 8)
+    : `${Date.now()}`;
+  return `${prefix}-${suffix}`;
+}
 
 function App() {
   const [query, setQuery] = useState("");
@@ -247,11 +282,23 @@ function App() {
   const [opsLoading, setOpsLoading] = useState(false);
   const [cartBusy, setCartBusy] = useState(false);
   const [checkoutBusy, setCheckoutBusy] = useState(false);
+  const [walletBalanceCents, setWalletBalanceCents] = useState(() => {
+    if (typeof window === "undefined") return walletDefaultBalanceCents;
+    const stored = window.localStorage.getItem(walletStorageKey);
+    const parsed = Number(stored);
+    return Number.isFinite(parsed) && parsed >= 0 ? Math.trunc(parsed) : walletDefaultBalanceCents;
+  });
+  const [walletTopUp, setWalletTopUp] = useState("25");
+  const [cartNotice, setCartNotice] = useState("");
   const [checkoutNotice, setCheckoutNotice] = useState("");
   const [checkoutForm, setCheckoutForm] = useState({
     address: "Kyiv, Makerspace 14, Bench 3",
     note: "Please include anti-static packaging.",
-    paymentMethod: "card"
+    paymentMethod: "card",
+    cardHolder: "Bodya Builder",
+    cardNumber: "4242 4242 4242 4242",
+    cardExpiry: "12/30",
+    cardCvv: "123"
   });
   const [loading, setLoading] = useState(true);
   const deferredQuery = useDeferredValue(query);
@@ -259,6 +306,10 @@ function App() {
   useEffect(() => {
     trackPageView(window.location.pathname).catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(walletStorageKey, String(walletBalanceCents));
+  }, [walletBalanceCents]);
 
   useEffect(() => {
     void bootstrapAccount();
@@ -346,19 +397,24 @@ function App() {
 
   const visibleProducts = storefront.products;
   const productByID = useMemo(() => new Map(storefront.products.map((product) => [product.id, product])), [storefront.products]);
+  const demoShelfActive = !storefront.live;
   const effectiveCart = useMemo(() => {
-    if (cartData) {
+    if (cartData && !demoShelfActive) {
       const next: Record<string, number> = {};
       for (const item of cartData.items) next[item.product_id] = item.quantity;
       return next;
     }
     return guestCart;
-  }, [cartData, guestCart]);
+  }, [cartData, demoShelfActive, guestCart]);
   const cartItems = useMemo(() => storefront.products.filter((product) => effectiveCart[product.id]), [effectiveCart, storefront.products]);
+  const cartHasLiveIDs = cartItems.every((product) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(product.id));
   const wishlistProductIDs = useMemo(() => new Set(wishlistItems.map((item) => item.product_id)), [wishlistItems]);
   const subtotal = cartItems.reduce((sum, product) => sum + product.price * effectiveCart[product.id], 0);
   const deliveryPrice = Number(deliveryOptions[delivery].price.replace("$", ""));
   const total = subtotal + deliveryPrice;
+  const totalCents = Math.round(total * 100);
+  const walletBalance = walletBalanceCents / 100;
+  const walletShortfallCents = Math.max(totalCents - walletBalanceCents, 0);
   const stats = [
     { icon: Cpu, value: String(storefront.products.length), label: storefront.live ? "catalog modules live" : "demo modules ready" },
     { icon: Zap, value: String(storefront.recommendations.length), label: "gateway recommendation picks" },
@@ -513,8 +569,9 @@ function App() {
   }
 
   async function add(productId: string) {
-    if (!account) {
+    if (!account || demoShelfActive) {
       setGuestCart((current) => ({ ...current, [productId]: (current[productId] ?? 0) + 1 }));
+      setCartNotice(demoShelfActive ? "Demo shelf updated locally. Live checkout needs UUID-backed catalog items." : "");
       return;
     }
     const product = productByID.get(productId);
@@ -523,13 +580,16 @@ function App() {
     try {
       const next = await addCartItem({ productID: productId, quantity: 1, unitPriceCents: toCents(product.price) });
       setCartData(next);
+      setCartNotice("");
+    } catch (error) {
+      setCartNotice(error instanceof Error ? error.message : "Could not add item to cart.");
     } finally {
       setCartBusy(false);
     }
   }
 
   async function remove(productId: string) {
-    if (!account) {
+    if (!account || demoShelfActive) {
       setGuestCart((current) => {
         const next = { ...current };
         const quantity = (next[productId] ?? 0) - 1;
@@ -537,6 +597,7 @@ function App() {
         else next[productId] = quantity;
         return next;
       });
+      setCartNotice(demoShelfActive ? "Demo shelf updated locally. Live checkout needs UUID-backed catalog items." : "");
       return;
     }
     const quantity = (effectiveCart[productId] ?? 0) - 1;
@@ -544,18 +605,121 @@ function App() {
     try {
       const next = await updateCartItem(productId, Math.max(quantity, 0));
       setCartData(next);
+      setCartNotice("");
+    } catch (error) {
+      setCartNotice(error instanceof Error ? error.message : "Could not update cart item.");
     } finally {
       setCartBusy(false);
     }
   }
 
+  function validatePaymentDetails() {
+    if (checkoutForm.paymentMethod !== "card") return "";
+    const digits = cardDigits(checkoutForm.cardNumber);
+    if (!checkoutForm.cardHolder.trim()) return "Enter the card holder name.";
+    if (digits.length < 12 || digits.length > 19) return "Enter a valid card number.";
+    if (!/^\d{2}\/\d{2}$/.test(checkoutForm.cardExpiry)) return "Enter card expiry as MM/YY.";
+    if (!/^\d{3,4}$/.test(checkoutForm.cardCvv)) return "Enter a valid CVV.";
+    return "";
+  }
+
+  function topUpWalletFromForm() {
+    const paymentError = validatePaymentDetails();
+    if (paymentError) {
+      setCheckoutNotice(paymentError);
+      return;
+    }
+    const amount = Number(walletTopUp);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setCheckoutNotice("Enter a top-up amount greater than $0.");
+      return;
+    }
+    const amountCents = Math.round(amount * 100);
+    setWalletBalanceCents((current) => current + amountCents);
+    setCheckoutNotice(`Wallet topped up by $${(amountCents / 100).toFixed(2)} using ${checkoutForm.paymentMethod === "card" ? `card ending ${cardLast4(checkoutForm.cardNumber)}` : checkoutForm.paymentMethod}.`);
+  }
+
   async function submitCheckout() {
-    if (!account) {
+    if (!cartItems.length) {
+      setCheckoutNotice("Your cart is empty right now.");
+      return;
+    }
+    const paymentError = validatePaymentDetails();
+    if (paymentError) {
+      setCheckoutNotice(paymentError);
+      return;
+    }
+    if (walletBalanceCents < totalCents) {
+      setCheckoutNotice(`Top up your wallet by $${(walletShortfallCents / 100).toFixed(2)} to cover this order.`);
+      return;
+    }
+    if (!account && !demoShelfActive) {
       setCheckoutNotice("Sign in first so the cart, order and delivery history can sync to your account.");
       return;
     }
-    if (!cartItems.length) {
-      setCheckoutNotice("Your cart is empty right now.");
+    if (demoShelfActive || !cartHasLiveIDs) {
+      const now = new Date().toISOString();
+      const orderID = createDemoID("demo-order");
+      const paymentID = createDemoID("demo-payment");
+      const shipmentID = createDemoID("demo-shipment");
+      const demoAccountID = account?.id ?? "demo-account";
+      const demoOrder: Order = {
+        id: orderID,
+        account_id: demoAccountID,
+        cart_id: cartData?.id,
+        status: "processing",
+        currency: "USD",
+        subtotal_cents: Math.round(subtotal * 100),
+        shipping_cents: Math.round(deliveryPrice * 100),
+        total_cents: totalCents,
+        delivery_method: deliveryOptions[delivery].title,
+        delivery_address: checkoutForm.address,
+        customer_note: checkoutForm.note,
+        items: cartItems.map((product) => ({
+          id: createDemoID("demo-item"),
+          product_id: product.id,
+          quantity: effectiveCart[product.id],
+          unit_price_cents: toCents(product.price),
+          line_total_cents: toCents(product.price) * effectiveCart[product.id]
+        })),
+        created_at: now,
+        updated_at: now
+      };
+      const demoPayment: Payment = {
+        id: paymentID,
+        order_id: orderID,
+        account_id: demoAccountID,
+        status: "succeeded",
+        provider: paymentProvider(checkoutForm.paymentMethod),
+        method: checkoutForm.paymentMethod,
+        currency: "USD",
+        amount_cents: totalCents,
+        transaction_ref: `demo-${checkoutForm.paymentMethod}-${cardLast4(checkoutForm.cardNumber)}-${Date.now()}`,
+        paid_at: now,
+        updated_at: now
+      };
+      const demoShipment: Shipment = {
+        id: shipmentID,
+        order_id: orderID,
+        account_id: demoAccountID,
+        status: "created",
+        carrier: "Nova Poshta",
+        service_level: deliveryOptions[delivery].title,
+        tracking_number: `EM-${Date.now()}`,
+        destination_address: checkoutForm.address,
+        eta: new Date(Date.now() + 36 * 60 * 60 * 1000).toISOString(),
+        updated_at: now
+      };
+
+      setOrderBundle((current) => ({
+        orders: [demoOrder, ...current.orders].slice(0, 10),
+        payments: [demoPayment, ...current.payments].slice(0, 10),
+        shipments: [demoShipment, ...current.shipments].slice(0, 10)
+      }));
+      setWalletBalanceCents((current) => current - totalCents);
+      setGuestCart({});
+      setCartData(null);
+      setCheckoutNotice(`Demo order ${orderID.slice(0, 8)} paid from wallet balance using ${checkoutForm.paymentMethod} and queued locally.`);
       return;
     }
     setCheckoutBusy(true);
@@ -582,10 +746,10 @@ function App() {
       });
       orderID = order.id;
 
-      const transactionRef = `demo-${Date.now()}`;
+      const transactionRef = `demo-${checkoutForm.paymentMethod}-${cardLast4(checkoutForm.cardNumber)}-${Date.now()}`;
       const payment = await createPayment({
         orderID: order.id,
-        provider: "demo-stripe",
+        provider: paymentProvider(checkoutForm.paymentMethod),
         method: checkoutForm.paymentMethod,
         currency: order.currency,
         amountCents: order.total_cents,
@@ -610,6 +774,7 @@ function App() {
       cartFinalized = true;
 
       await loadOperationalData();
+      setWalletBalanceCents((current) => current - totalCents);
       setCheckoutNotice(`Order ${order.id.slice(0, 8)} is now checked out, paid and pushed into shipping.`);
     } catch (error) {
       if (orderID) {
@@ -755,6 +920,39 @@ function App() {
           <div className="panel-head">
             <span className="eyebrow dark"><WalletCards size={15} /> Checkout flow</span>
           </div>
+          <div className="wallet-panel">
+            <div className="wallet-summary">
+              <span>Wallet balance</span>
+              <strong>${walletBalance.toFixed(2)}</strong>
+            </div>
+            <div className="wallet-actions">
+              <div className="wallet-quick">
+                {[10, 25, 50].map((amount) => (
+                  <button key={amount} className={walletTopUp === String(amount) ? "chip active" : "chip"} type="button" onClick={() => setWalletTopUp(String(amount))}>
+                    + ${amount}
+                  </button>
+                ))}
+              </div>
+              <label className="field compact">
+                <span>Custom top-up</span>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={walletTopUp}
+                  onChange={(event) => setWalletTopUp(event.target.value)}
+                />
+              </label>
+              <button
+                className="button ghost wallet-topup"
+                type="button"
+                onClick={topUpWalletFromForm}
+              >
+                Top up wallet
+              </button>
+            </div>
+            <small>Need ${(walletShortfallCents / 100).toFixed(2)} more for this cart.</small>
+          </div>
           <div className="form-grid">
             <label className="field"><span>Delivery address</span><textarea value={checkoutForm.address} onChange={(event) => setCheckoutForm((current) => ({ ...current, address: event.target.value }))} rows={3} /></label>
             <label className="field"><span>Customer note</span><textarea value={checkoutForm.note} onChange={(event) => setCheckoutForm((current) => ({ ...current, note: event.target.value }))} rows={2} /></label>
@@ -765,6 +963,48 @@ function App() {
                 <option value="invoice">Invoice</option>
               </select>
             </label>
+            {checkoutForm.paymentMethod === "card" ? (
+              <div className="card-fields">
+                <label className="field"><span>Card holder</span>
+                  <input
+                    value={checkoutForm.cardHolder}
+                    onChange={(event) => setCheckoutForm((current) => ({ ...current, cardHolder: event.target.value }))}
+                    placeholder="Name on card"
+                    autoComplete="cc-name"
+                  />
+                </label>
+                <label className="field"><span>Card number</span>
+                  <div className="card-number-input">
+                    <CreditCard size={18} />
+                    <input
+                      value={checkoutForm.cardNumber}
+                      onChange={(event) => setCheckoutForm((current) => ({ ...current, cardNumber: formatCardNumber(event.target.value) }))}
+                      placeholder="4242 4242 4242 4242"
+                      inputMode="numeric"
+                      autoComplete="cc-number"
+                    />
+                  </div>
+                </label>
+                <label className="field"><span>Expiry</span>
+                  <input
+                    value={checkoutForm.cardExpiry}
+                    onChange={(event) => setCheckoutForm((current) => ({ ...current, cardExpiry: formatExpiry(event.target.value) }))}
+                    placeholder="MM/YY"
+                    inputMode="numeric"
+                    autoComplete="cc-exp"
+                  />
+                </label>
+                <label className="field"><span>CVV</span>
+                  <input
+                    value={checkoutForm.cardCvv}
+                    onChange={(event) => setCheckoutForm((current) => ({ ...current, cardCvv: event.target.value.replace(/\D/g, "").slice(0, 4) }))}
+                    placeholder="123"
+                    inputMode="numeric"
+                    autoComplete="cc-csc"
+                  />
+                </label>
+              </div>
+            ) : null}
           </div>
           {checkoutNotice ? <div className="notice">{checkoutNotice}</div> : null}
           <button className="button checkout wide" type="button" onClick={() => void submitCheckout()} disabled={checkoutBusy || authLoading}>
@@ -838,6 +1078,7 @@ function App() {
             <span><ShoppingBag size={18} /> Checkout rail</span>
             <strong>${total.toFixed(2)}</strong>
           </div>
+          {cartNotice ? <div className="notice">{cartNotice}</div> : null}
           <div className="cart-items">
             {cartItems.map((product) => (
               <div className="cart-item" key={product.id}>
@@ -852,7 +1093,7 @@ function App() {
           </div>
           <div className="cart-total"><span>Delivery</span><strong>{deliveryOptions[delivery].price}</strong></div>
           <div className="cart-total grand"><span>Total</span><strong>${total.toFixed(2)}</strong></div>
-          <button className="button checkout" type="button" onClick={() => void submitCheckout()} disabled={checkoutBusy}>{account ? "Run live checkout" : "Sign in to checkout"}</button>
+          <button className="button checkout" type="button" onClick={() => void submitCheckout()} disabled={checkoutBusy}>{account ? "Run live checkout" : "Buy with wallet"}</button>
         </aside>
       </section>
 

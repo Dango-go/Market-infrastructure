@@ -58,7 +58,7 @@ spec:
         - name: JWT_ISSUER
           value: embedded-market-auth
         - name: KAFKA_BROKERS
-          value: kafka:9092
+          value: prod-cluster-kafka-bootstrap.kafka.svc:9092
         - name: JWT_AUDIENCE
           value: embedded-market
         - name: POSTGRES_DSN

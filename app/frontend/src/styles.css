@@ -821,6 +821,10 @@ h3 {
 }
 
 @media (max-width: 760px) {
+  .card-fields {
+    grid-template-columns: 1fr;
+  }
+
   .site-shell {
     width: min(100% - 22px, 1180px);
   }
@@ -996,6 +1000,78 @@ select {
   color: var(--ink);
   background: rgba(255, 255, 255, 0.8);
   resize: vertical;
+}
+
+
+.wallet-panel {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(16, 32, 24, 0.1);
+  border-radius: 8px;
+  background: #f3ffed;
+}
+
+.wallet-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wallet-summary span {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.wallet-summary strong {
+  font-size: 1.55rem;
+}
+
+.wallet-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.wallet-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.wallet-topup {
+  width: 100%;
+  color: var(--deep);
+  border-color: rgba(16, 32, 24, 0.16);
+  background: white;
+}
+
+.card-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.card-fields .field:nth-child(2) {
+  grid-column: 1 / -1;
+}
+
+.card-number-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.card-number-input input {
+  padding-inline: 0;
+  border: 0;
+  background: transparent;
 }
 
 .wide {

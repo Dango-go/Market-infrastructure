@@ -41,11 +41,11 @@ spec:
           containerPort: 9090
         resources:
           requests:
-            cpu: 50m
-            memory: 64Mi
+            cpu: 64m
+            memory: 128Mi
           limits:
-            cpu: 50m
-            memory: 64Mi
+            cpu: 64m
+            memory: 128Mi
 
       
         volumeMounts:
@@ -53,13 +53,14 @@ spec:
           mountPath: /etc/secrets/jwt/
           readOnly: true 
 
+
         env:
         - name: SERVICE_NAME
           value: analytics-service
         - name: JWT_ISSUER
           value: embedded-market-auth
         - name: KAFKA_BROKERS
-          value: kafka:9092
+          value: prod-cluster-kafka-bootstrap.kafka.svc:9092
         - name: JWT_AUDIENCE
           value: embedded-market
         - name: POSTGRES_DSN

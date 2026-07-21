@@ -60,7 +60,7 @@ spec:
         - name: JWT_AUDIENCE
           value: embedded-market
         - name: KAFKA_BROKERS
-          value: kafka:9092
+          value: prod-cluster-kafka-bootstrap.kafka.svc:9092
         - name: POSTGRES_DSN
           value: postgres://wishlist:wishlist@postgres-cluster-rw.storage.svc.cluster.local:5432/wishlist-db-v1?sslmode=disable
         - name: JWT_PUBLIC_KEY_FILE

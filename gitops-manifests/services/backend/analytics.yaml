@@ -48,10 +48,10 @@ spec:
         resources:
           requests:
             cpu: 50m
-            memory: 64Mi
+            memory: 80Mi
           limits:
             cpu: 50m
-            memory: 64Mi
+            memory: 80Mi
         env:
         - name: SERVICE_NAME
           value: analytics-service

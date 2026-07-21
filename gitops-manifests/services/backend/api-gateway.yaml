@@ -49,13 +49,13 @@ spec:
           resources:
             requests:
               cpu: 50m
-              memory: 64Mi
+              memory: 80Mi
             limits:
               cpu: 50m
-              memory: 64Mi
+              memory: 80Mi
           # urls services
           envFrom:
-            - configMapRef:
+          - configMapRef:
                 name: services-urls
           env:
             - name: SERVICE_NAME

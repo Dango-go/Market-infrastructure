@@ -219,7 +219,7 @@ services:
     - name: JWT_ISSUER
       value: embedded-market-auth
     - name: KAFKA_BROKERS
-      value: kafka:9092
+      value: prod-cluster-kafka-bootstrap.kafka.svc:9092
     - name: JWT_AUDIENCE
       value: embedded-market
     - name: POSTGRES_DSN
@@ -280,7 +280,7 @@ services:
     - name: JWT_ISSUER
       value: embedded-market-auth
     - name: KAFKA_BROKERS
-      value: kafka:9092
+      value: prod-cluster-kafka-bootstrap.kafka.svc:9092
     - name: JWT_AUDIENCE
       value: embedded-market
     - name: POSTGRES_DSN
@@ -348,7 +348,7 @@ services:
     - name: JWT_ISSUER
       value: embedded-market-auth
     - name: KAFKA_BROKERS
-      value: kafka:9092
+      value: prod-cluster-kafka-bootstrap.kafka.svc:9092
     - name: JWT_AUDIENCE
       value: embedded-market
     - name: POSTGRES_DSN
@@ -416,7 +416,7 @@ services:
     - name: JWT_ISSUER
       value: embedded-market-auth
     - name: KAFKA_BROKERS
-      value: kafka:9092
+      value: prod-cluster-kafka-bootstrap.kafka.svc:9092
     - name: JWT_AUDIENCE
       value: embedded-market
     - name: POSTGRES_DSN
@@ -484,7 +484,7 @@ services:
     - name: JWT_ISSUER
       value: embedded-market-auth
     - name: KAFKA_BROKERS
-      value: kafka:9092
+      value: prod-cluster-kafka-bootstrap.kafka.svc:9092
     - name: JWT_AUDIENCE
       value: embedded-market
     - name: POSTGRES_DSN
@@ -554,7 +554,7 @@ services:
     - name: JWT_AUDIENCE
       value: embedded-market
     - name: KAFKA_BROKERS
-      value: kafka:9092
+      value: prod-cluster-kafka-bootstrap.kafka.svc:9092
     - name: POSTGRES_DSN
       value: postgres://order:order@postgres-cluster-rw.storage.svc.cluster.local:5432/order-db-v1?sslmode=disable
     - name: JWT_PUBLIC_KEY_FILE
@@ -622,7 +622,7 @@ services:
     - name: JWT_AUDIENCE
       value: embedded-market
     - name: KAFKA_BROKERS
-      value: kafka:9092
+      value: prod-cluster-kafka-bootstrap.kafka.svc:9092
     - name: POSTGRES_DSN
       value: postgres://payment:payment@postgres-cluster-rw.storage.svc.cluster.local:5432/payment-db-v1?sslmode=disable
     - name: JWT_PUBLIC_KEY_FILE
@@ -690,7 +690,7 @@ services:
     - name: JWT_AUDIENCE
       value: embedded-market
     - name: KAFKA_BROKERS
-      value: kafka:9092
+      value: prod-cluster-kafka-bootstrap.kafka.svc:9092
     - name: POSTGRES_DSN
       value: postgres://pricing:pricing@postgres-cluster-rw.storage.svc.cluster.local:5432/pricing-db-v1?sslmode=disable
     - name: JWT_PUBLIC_KEY_FILE
@@ -956,7 +956,7 @@ services:
     - name: JWT_AUDIENCE
       value: embedded-market
     - name: KAFKA_BROKERS
-      value: kafka:9092
+      value: prod-cluster-kafka-bootstrap.kafka.svc:9092
     - name: POSTGRES_DSN
       value: postgres://shipping:shipping@postgres-cluster-rw.storage.svc.cluster.local:5432/shipping-db-v1?sslmode=disable
     - name: JWT_PUBLIC_KEY_FILE
@@ -1024,7 +1024,7 @@ services:
     - name: JWT_AUDIENCE
       value: embedded-market
     - name: KAFKA_BROKERS
-      value: kafka:9092
+      value: prod-cluster-kafka-bootstrap.kafka.svc:9092
     - name: POSTGRES_DSN
       value: postgres://user:user@postgres-cluster-rw.storage.svc.cluster.local:5432/user-db-v1?sslmode=disable
     - name: JWT_PUBLIC_KEY_FILE
@@ -1092,7 +1092,7 @@ services:
     - name: JWT_AUDIENCE
       value: embedded-market
     - name: KAFKA_BROKERS
-      value: kafka:9092
+      value: prod-cluster-kafka-bootstrap.kafka.svc:9092
     - name: POSTGRES_DSN
       value: postgres://wishlist:wishlist@postgres-cluster-rw.storage.svc.cluster.local:5432/wishlist-db-v1?sslmode=disable
     - name: JWT_PUBLIC_KEY_FILE
