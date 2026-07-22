@@ -249,6 +249,12 @@ function cardLast4(cardNumber: string) {
   return digits.slice(-4) || "demo";
 }
 
+function paymentLabel(method: string, cardNumber: string) {
+  if (method === "card") return `card ending ${cardLast4(cardNumber)}`;
+  if (method === "apple-pay") return "Apple Pay";
+  return "invoice";
+}
+
 function createDemoID(prefix: string) {
   const suffix = typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID().slice(0, 8)
@@ -415,6 +421,11 @@ function App() {
   const totalCents = Math.round(total * 100);
   const walletBalance = walletBalanceCents / 100;
   const walletShortfallCents = Math.max(totalCents - walletBalanceCents, 0);
+  const walletStatus = walletShortfallCents > 0
+    ? `Need $${(walletShortfallCents / 100).toFixed(2)} more for this cart.`
+    : cartItems.length
+      ? "Wallet is ready for this order."
+      : "Add a product to start checkout.";
   const stats = [
     { icon: Cpu, value: String(storefront.products.length), label: storefront.live ? "catalog modules live" : "demo modules ready" },
     { icon: Zap, value: String(storefront.recommendations.length), label: "gateway recommendation picks" },
@@ -623,20 +634,21 @@ function App() {
     return "";
   }
 
-  function topUpWalletFromForm() {
+  function topUpWalletFromForm(amountOverride?: number) {
     const paymentError = validatePaymentDetails();
     if (paymentError) {
       setCheckoutNotice(paymentError);
       return;
     }
-    const amount = Number(walletTopUp);
+    const amount = amountOverride ?? Number(walletTopUp);
     if (!Number.isFinite(amount) || amount <= 0) {
       setCheckoutNotice("Enter a top-up amount greater than $0.");
       return;
     }
     const amountCents = Math.round(amount * 100);
     setWalletBalanceCents((current) => current + amountCents);
-    setCheckoutNotice(`Wallet topped up by $${(amountCents / 100).toFixed(2)} using ${checkoutForm.paymentMethod === "card" ? `card ending ${cardLast4(checkoutForm.cardNumber)}` : checkoutForm.paymentMethod}.`);
+    setWalletTopUp(String(amount));
+    setCheckoutNotice(`Wallet topped up by $${(amountCents / 100).toFixed(2)} using ${paymentLabel(checkoutForm.paymentMethod, checkoutForm.cardNumber)}.`);
   }
 
   async function submitCheckout() {
@@ -928,12 +940,12 @@ function App() {
             <div className="wallet-actions">
               <div className="wallet-quick">
                 {[10, 25, 50].map((amount) => (
-                  <button key={amount} className={walletTopUp === String(amount) ? "chip active" : "chip"} type="button" onClick={() => setWalletTopUp(String(amount))}>
+                  <button key={amount} className={walletTopUp === String(amount) ? "chip active" : "chip"} type="button" onClick={() => topUpWalletFromForm(amount)}>
                     + ${amount}
                   </button>
                 ))}
               </div>
-              <label className="field compact">
+              <label className="field">
                 <span>Custom top-up</span>
                 <input
                   type="number"
@@ -951,7 +963,7 @@ function App() {
                 Top up wallet
               </button>
             </div>
-            <small>Need ${(walletShortfallCents / 100).toFixed(2)} more for this cart.</small>
+            <small>{walletStatus}</small>
           </div>
           <div className="form-grid">
             <label className="field"><span>Delivery address</span><textarea value={checkoutForm.address} onChange={(event) => setCheckoutForm((current) => ({ ...current, address: event.target.value }))} rows={3} /></label>
@@ -1009,7 +1021,7 @@ function App() {
           {checkoutNotice ? <div className="notice">{checkoutNotice}</div> : null}
           <button className="button checkout wide" type="button" onClick={() => void submitCheckout()} disabled={checkoutBusy || authLoading}>
             {checkoutBusy ? <LoaderCircle size={18} className="spin" /> : null}
-            Create order, payment and shipment
+            {walletBalanceCents < totalCents ? "Top up before checkout" : "Buy now"}
           </button>
         </article>
       </section>

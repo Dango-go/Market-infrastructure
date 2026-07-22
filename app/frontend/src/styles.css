@@ -821,10 +821,6 @@ h3 {
 }
 
 @media (max-width: 760px) {
-  .card-fields {
-    grid-template-columns: 1fr;
-  }
-
   .site-shell {
     width: min(100% - 22px, 1180px);
   }
@@ -1006,10 +1002,8 @@ select {
 .wallet-panel {
   display: grid;
   gap: 12px;
-  padding: 14px;
-  border: 1px solid rgba(16, 32, 24, 0.1);
-  border-radius: 8px;
-  background: #f3ffed;
+  padding: 0 0 14px;
+  border-bottom: 1px solid var(--line);
 }
 
 .wallet-summary {
@@ -1017,30 +1011,41 @@ select {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding: 14px;
+  border-radius: 8px;
+  color: var(--deep);
+  background: #e8ffd8;
 }
 
 .wallet-summary span {
-  color: var(--muted);
+  color: #355442;
   font-weight: 800;
 }
 
 .wallet-summary strong {
-  font-size: 1.55rem;
+  font-size: 1.7rem;
 }
 
 .wallet-actions {
   display: grid;
+  grid-template-columns: 1fr auto;
   gap: 10px;
+  align-items: end;
 }
 
 .wallet-quick {
-  display: flex;
-  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
-.wallet-topup {
+.wallet-quick .chip {
   width: 100%;
+}
+
+.wallet-topup {
+  min-width: 150px;
   color: var(--deep);
   border-color: rgba(16, 32, 24, 0.16);
   background: white;
@@ -1048,10 +1053,11 @@ select {
 
 .card-fields {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(84px, 0.42fr) minmax(76px, 0.35fr);
   gap: 12px;
 }
 
+.card-fields .field:first-child,
 .card-fields .field:nth-child(2) {
   grid-column: 1 / -1;
 }
@@ -1072,6 +1078,11 @@ select {
   padding-inline: 0;
   border: 0;
   background: transparent;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
 }
 
 .wide {
@@ -1119,4 +1130,16 @@ select {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+@media (max-width: 760px) {
+  .wallet-actions,
+  .wallet-quick,
+  .card-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .wallet-topup {
+    width: 100%;
+  }
 }
